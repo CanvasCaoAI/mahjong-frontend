@@ -18,11 +18,13 @@ export function onState(cb: (st: PublicState) => void): () => void {
 
 export function connectToServer(
   serverUrl: string,
+  params: { roomId: string; clientId: string },
   name: string | undefined,
   onError: (msg: string) => void,
 ) {
   client.connect(
     serverUrl,
+    params,
     (st) => {
       lastState = st;
       for (const l of listeners) l(st);

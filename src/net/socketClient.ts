@@ -9,9 +9,9 @@ export type ClientEvents = {
 export class MahjongClient {
   private socket: Socket | null = null;
 
-  connect(serverUrl: string, onState: (st: PublicState) => void, onError: (msg: string) => void) {
+  connect(serverUrl: string, params: { roomId: string; clientId: string }, onState: (st: PublicState) => void, onError: (msg: string) => void) {
     this.socket?.disconnect();
-    this.socket = io(serverUrl, { transports: ['websocket'] });
+    this.socket = io(serverUrl, { transports: ['websocket'], auth: params });
 
     this.socket.on('state', onState);
     this.socket.on('errorMsg', (e: { message: string }) => onError(e.message));
