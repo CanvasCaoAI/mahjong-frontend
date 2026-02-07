@@ -1,0 +1,17 @@
+:root{color-scheme:light}
+html,body{height:100%;margin:0;background:#FFFFFF;color:#0B1020;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+
+#lobby{height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+#app{height:100%;display:flex;align-items:center;justify-content:center}
+
+canvas{border-radius:16px;box-shadow:0 22px 40px rgba(0,0,0,.18)}
+
+.lobby-card{width:min(680px,100%);border:1px solid rgba(15,23,42,.12);border-radius:16px;background:#fff;box-shadow:0 10px 30px rgba(2,6,23,.08);padding:18px 18px 14px}
+.lobby-title{font-size:20px;font-weight:800;margin-bottom:12px}
+.lobby-row{display:grid;grid-template-columns:80px 1fr;gap:10px 12px;align-items:center;margin-bottom:12px}
+.lobby-input{padding:10px 12px;border-radius:12px;border:1px solid rgba(15,23,42,.14);background:#fff;font-size:14px}
+.lobby-buttons{display:flex;gap:10px;margin-bottom:10px}
+.lobby-btn{padding:10px 14px;border-radius:12px;border:1px solid rgba(15,23,42,.14);background:#0f172a;color:#fff;font-weight:700;cursor:pointer}
+.lobby-btn:disabled{opacity:.45;cursor:not-allowed}
+.lobby-status{font-size:13px;color:#334155;margin-bottom:8px}
+.lobby-players{font-size:13px;color:#0f172a}
