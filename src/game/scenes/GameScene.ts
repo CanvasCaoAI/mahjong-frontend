@@ -1,11 +1,14 @@
 import Phaser from 'phaser';
-import type { PublicState } from '../../domain/types';
+import type { PublicState, Seat } from '../../domain/types';
 import { TileButton } from '../ui/TileButton';
 import { ALL_TILES, backKey, backUrl, tileKey, tileUrl } from '../../domain/tileset';
 import { client, onState } from '../../net/clientSingleton';
 
 const tableBgKey = 'table_bg';
 const tableBgUrl = '/assets/ui/table-solid-darkgreen.svg';
+
+const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
+const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
 
 
 export class GameScene extends Phaser.Scene {
@@ -55,8 +58,9 @@ export class GameScene extends Phaser.Scene {
     this.msgText = this.add.text(32, 90, '', { fontSize: '16px', color: '#E2E8F0', wordWrap: { width: 1030 } });
 
     // Win prompt buttons (show only when eligible)
-    this.huBtn = this.makeRoundBtn(960, 560, 44, '胡', 0xB91C1C, () => client.checkWin());
-    this.passBtn = this.makeRoundBtn(1040, 560, 36, '过', 0x0F766E, () => {
+    // Position: move a bit left+up, and keep distance between Hu / Pass.
+    this.huBtn = this.makeRoundBtn(900, 520, 44, '胡', 0xB91C1C, () => client.checkWin());
+    this.passBtn = this.makeRoundBtn(1035, 520, 36, '过', 0x0F766E, () => {
       const st = this.state;
       if (st && st.yourSeat !== null) {
         this.passedToken = `${st.turn}:${st.phase}:${st.wallCount}`;
@@ -103,11 +107,15 @@ export class GameScene extends Phaser.Scene {
     const connected = client.connected;
 
     const players = st?.players
-      .map((p, i) => (p ? `座位${i}:${p.name}${p.ready ? '(已准备)' : ''}` : `座位${i}:(空)`))
+      .map((p, i) => {
+        const pos = seatName(i as Seat);
+        return p ? `${pos}:${p.name}${p.ready ? '(已准备)' : ''}` : `${pos}:(空)`;
+      })
       .join(' | ') ?? '未连接';
 
+    const youPos = st?.yourSeat === null || st?.yourSeat === undefined ? '-' : seatName(st.yourSeat as Seat);
     this.hudText.setText(
-      `连接：${connected ? '✅' : '❌'}  |  你的座位：${st?.yourSeat ?? '-'}  |  牌堆：${st?.wallCount ?? '-'}\n${players}`
+      `连接：${connected ? '✅' : '❌'}  |  你：${youPos}  |  牌堆：${st?.wallCount ?? '-'}\n${players}`
     );
 
     this.msgText.setText(st?.message ?? (connected ? '等待服务器状态…' : '回到大厅点击“连接”。'));
@@ -127,11 +135,9 @@ export class GameScene extends Phaser.Scene {
       this.autoDrawToken = null;
     }
 
-    // Hu/Pass buttons: show when it's your turn and the game isn't ended.
-    // (Real win-eligibility requires server-side check; Hu triggers checkWin.)
-    const canPromptWin = !!(connected && st && st.started && st.yourSeat !== null && st.turn === st.yourSeat && st.phase !== 'end');
-    const passToken = st ? `${st.turn}:${st.phase}:${st.wallCount}` : null;
-    const shouldShow = canPromptWin && (!this.passedToken || this.passedToken !== passToken);
+    // Hu/Pass buttons: only show when server says winAvailable (computed after each draw).
+    const passToken = st ? `${st.turn}:${st.phase}:${st.wallCount}:${st.yourHand.length}` : null;
+    const shouldShow = !!(st && st.winAvailable && (!this.passedToken || this.passedToken !== passToken));
     this.huBtn?.setVisible(shouldShow);
     this.passBtn?.setVisible(shouldShow);
 
@@ -195,8 +201,7 @@ export class GameScene extends Phaser.Scene {
 
     this.renderOtherHands(st);
     this.renderDiscardsBySeat(st);
-    const turn = st ? `轮到：座位${st.turn} / ${st.phase}` : '';
-    this.addOrUpdateOverlay(turn);
+    this.updateTurnIndicator(st);
 
     // Show result if any
     if (st?.result) {
@@ -253,13 +258,103 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private overlayText?: Phaser.GameObjects.Text;
-  private addOrUpdateOverlay(text: string) {
-    if (!this.overlayText) {
-      this.overlayText = this.add.text(32, 180, text, { fontSize: '14px', color: '#CBD5E1' });
+  // Center turn indicator (dynamic winds around the viewer) + wall count
+  private turnIndicator?: {
+    container: Phaser.GameObjects.Container;
+    labels: {
+      bottom: Phaser.GameObjects.Text;
+      right: Phaser.GameObjects.Text;
+      top: Phaser.GameObjects.Text;
+      left: Phaser.GameObjects.Text;
+    };
+    wallText: Phaser.GameObjects.Text;
+  };
+
+  private ensureTurnIndicator() {
+    if (this.turnIndicator) return;
+
+    const cx = 550;
+    const cy = 330;
+
+    const container = this.add.container(cx, cy);
+
+    // simple compass background
+    const ring = this.add.circle(0, 0, 86, 0x000000, 0.08);
+    ring.setStrokeStyle(2, 0x0b3d2e, 0.35);
+
+    const center = this.add.rectangle(0, 0, 44, 44, 0x000000, 0.12);
+    center.setStrokeStyle(2, 0x86efac, 0.25);
+
+    const mk = (x: number, y: number) => {
+      const txt = this.add.text(x, y, '-', {
+        fontSize: '30px',
+        color: '#9CA3AF',
+        fontStyle: '900'
+      }).setOrigin(0.5);
+      return txt;
+    };
+
+    const labels = {
+      bottom: mk(0, 54),
+      right: mk(54, 0),
+      top: mk(0, -54),
+      left: mk(-54, 0),
+    };
+
+    const wallText = this.add.text(0, 118, '剩余张数：-', {
+      fontSize: '28px',
+      color: '#0B1020',
+      fontStyle: '900'
+    }).setOrigin(0.5);
+
+    container.add([ring, center, labels.bottom, labels.right, labels.top, labels.left, wallText]);
+    container.setDepth(5);
+
+    this.turnIndicator = { container, labels, wallText };
+  }
+
+  private updateTurnIndicator(st: PublicState | null) {
+    this.ensureTurnIndicator();
+    const ti = this.turnIndicator!;
+
+    // Dynamic wind labels around the viewer (seat numbers arranged clockwise)
+    if (st && st.yourSeat !== null) {
+      const you = st.yourSeat as Seat;
+      const bottom = you;
+      const right = (((you as number) + 1) % 4) as Seat;
+      const top = (((you as number) + 2) % 4) as Seat;
+      const left = (((you as number) + 3) % 4) as Seat;
+
+      ti.labels.bottom.setText(seatName(bottom));
+      ti.labels.right.setText(seatName(right));
+      ti.labels.top.setText(seatName(top));
+      ti.labels.left.setText(seatName(left));
+
+      // Highlight the direction of the current turn (relative to you)
+      const relTurn = (you - (st.turn as number) + 4) % 4; // 0=bottom,1=left,2=top,3=right
+      const isOn = {
+        bottom: relTurn === 0,
+        left: relTurn === 1,
+        top: relTurn === 2,
+        right: relTurn === 3,
+      };
+
+      for (const pos of ['bottom','left','top','right'] as const) {
+        const t = ti.labels[pos];
+        const on = isOn[pos];
+        t.setColor(on ? '#FDE68A' : '#9CA3AF');
+        t.setAlpha(on ? 1 : 0.55);
+      }
     } else {
-      this.overlayText.setText(text);
+      // Not seated yet
+      for (const pos of ['bottom','left','top','right'] as const) {
+        ti.labels[pos].setText('-');
+        ti.labels[pos].setColor('#9CA3AF');
+        ti.labels[pos].setAlpha(0.55);
+      }
     }
+
+    ti.wallText.setText(`剩余张数：${st?.wallCount ?? '-'}`);
   }
 
 
@@ -270,7 +365,10 @@ export class GameScene extends Phaser.Scene {
     if (!st || st.yourSeat === null) return;
 
     const you = st.yourSeat;
-    const rel = (seat: number) => (seat - you + 4) % 4;
+    // Seat numbers are arranged clockwise.
+    // Relative layout we draw: 0=self(bottom), 1=left, 2=top, 3=right.
+    // Therefore: right neighbor is seat (you+1), left neighbor is seat (you+3).
+    const rel = (seat: number) => (you - seat + 4) % 4;
     const clamp = (n: number, m: number) => Math.min(n, m);
 
     const makeBack = (x: number, y: number, angle: number) => {
@@ -329,7 +427,8 @@ export class GameScene extends Phaser.Scene {
     if (!st || st.yourSeat === null) return;
 
     const you = st.yourSeat;
-    const rel = (seat: number) => (seat - you + 4) % 4;
+    // Seat numbers are arranged clockwise; map seat->relative draw position.
+    const rel = (seat: number) => (you - seat + 4) % 4;
 
     const bySeat: Record<number, string[]> = { 0: [], 1: [], 2: [], 3: [] };
     for (const d of st.discards ?? []) {
@@ -353,6 +452,8 @@ export class GameScene extends Phaser.Scene {
         const cc = i % cols;
         const key = tileKey(tiles[i] as any);
         const img = this.add.image(startX + cc * gapX, startY + rr * gapY, key);
+        // Left/right discards should be rotated vertically.
+        if (r === 1 || r === 3) img.setAngle(90);
         img.setDisplaySize(28, 36);
         img.setAlpha(0.95);
         this.discardSprites.push(img);

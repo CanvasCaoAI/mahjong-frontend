@@ -1,7 +1,17 @@
-import type { PublicState } from './domain/types';
+import type { PublicState, Seat } from './domain/types';
 import { client, connectToServer, onState } from './net/clientSingleton';
 
+const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
+const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
+
 const DEFAULT_SERVER = 'http://localhost:5174';
+
+const RANDOM_NAMES = [
+  '阿凯','小鹿','丸子','阿飞','大熊','小新','皮皮','阿文','豆豆','小雨','米粒','南风','北辰','橘子','可可','星河','木木','团子'
+];
+function randomName() {
+  return RANDOM_NAMES[Math.floor(Math.random() * RANDOM_NAMES.length)] + String(Math.floor(10 + Math.random() * 90));
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string) {
   const n = document.createElement(tag);
@@ -19,25 +29,23 @@ export function mountLobby(opts: {
 
   const card = el('div', 'lobby-card');
   const title = el('div', 'lobby-title');
-  title.textContent = '双人麻将 · 联机大厅';
+  title.innerHTML = '<span class="lobby-title-big">麻将</span>';
 
   const row = el('div', 'lobby-row');
 
   const nameLabel = el('label');
   nameLabel.textContent = '昵称';
   const nameInput = el('input', 'lobby-input');
-  nameInput.placeholder = 'Canvas Cao';
-  nameInput.value = 'Canvas Cao';
-
-  const serverLabel = el('label');
-  serverLabel.textContent = '服务器';
-  const serverInput = el('input', 'lobby-input');
-  serverInput.placeholder = DEFAULT_SERVER;
-  serverInput.value = DEFAULT_SERVER;
+  const rn = randomName();
+  nameInput.placeholder = rn;
+  nameInput.value = '';
 
   const btnRow = el('div', 'lobby-buttons');
+  // Auto-connect on page load; keep buttons grouped.
   const connectBtn = el('button', 'lobby-btn');
-  connectBtn.textContent = '连接';
+  connectBtn.textContent = '连接中…';
+  connectBtn.disabled = true;
+
   const readyBtn = el('button', 'lobby-btn');
   readyBtn.textContent = '准备';
   readyBtn.disabled = true;
@@ -50,23 +58,48 @@ export function mountLobby(opts: {
   row.append(
     nameLabel,
     nameInput,
-    serverLabel,
-    serverInput,
   );
 
   card.append(title, row, btnRow, status, players);
   root.append(card);
 
+  let connecting = false;
+
+  function doConnect() {
+    if (connecting || client.connected) return;
+    connecting = true;
+    connectBtn.textContent = '连接中…';
+    connectBtn.disabled = true;
+
+    const name = nameInput.value.trim() || nameInput.placeholder || '玩家';
+    connectToServer(DEFAULT_SERVER, name, (msg) => {
+      status.textContent = `⚠️ ${msg}`;
+      connecting = false;
+      connectBtn.textContent = '重试连接';
+      connectBtn.disabled = false;
+    });
+  }
+
   function render(st: PublicState) {
     const connected = client.connected;
     const ptxt = st.players
-      .map((p, i) => (p ? `座位${i}: ${p.name}${p.ready ? '（已准备）' : ''}` : `座位${i}: (空)`))
+      .map((p, i) => {
+        const pos = seatName(i as Seat);
+        return p ? `${pos}: ${p.name}${p.ready ? '（已准备）' : ''}` : `${pos}: (空)`;
+      })
       .join(' | ');
 
-    status.textContent = `连接：${connected ? '✅' : '❌'}  |  ${st.message ?? ''}`;
+    status.textContent = '';
     players.textContent = ptxt;
 
     readyBtn.disabled = !connected;
+
+    // Update connect button state
+    if (connected) {
+      connecting = false;
+      connectBtn.textContent = '已连接';
+      connectBtn.disabled = true;
+    }
 
     const allReady = st.players.filter(Boolean).length === 4 && st.players.every(p => !!p && p.ready);
     if (st.started && allReady) {
@@ -76,10 +109,12 @@ export function mountLobby(opts: {
 
   const un = onState(render);
 
+  // Entering the page => auto connect
+  doConnect();
+
+  // Manual reconnect (only enabled on failure)
   connectBtn.onclick = () => {
-    connectToServer(serverInput.value.trim() || DEFAULT_SERVER, nameInput.value, (msg) => {
-      status.textContent = `⚠️ ${msg}`;
-    });
+    doConnect();
   };
 
   readyBtn.onclick = () => {
