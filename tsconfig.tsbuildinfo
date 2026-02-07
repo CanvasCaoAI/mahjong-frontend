@@ -1,1 +1,0 @@
-{"root":["./src/lobby.ts","./src/main.ts","./src/domain/tileset.ts","./src/domain/types.ts","./src/game/scenes/bootscene.ts","./src/game/scenes/gamescene.ts","./src/game/ui/tilebutton.ts","./src/net/clientsingleton.ts","./src/net/socketclient.ts"],"version":"5.9.3"}
