@@ -71,6 +71,8 @@ export class TurnCompass {
       this.wallCountText,
     ]);
 
+    // 整体缩小 20%，保持以自身中心缩放
+    this.container.setScale(0.8);
     this.container.setDepth(5);
   }
 

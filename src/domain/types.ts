@@ -21,6 +21,7 @@ export type PublicState = {
   yourSeat: Seat | null;
   yourHand: Tile[];
   yourMelds: Meld[];
+  meldsBySeat: Meld[][];
   handCounts: number[]; // 0-3
   winAvailable: boolean;
   pengAvailable: boolean;

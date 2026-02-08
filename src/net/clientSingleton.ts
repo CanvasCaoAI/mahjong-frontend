@@ -27,6 +27,7 @@ export function connectToServer(
     params,
     (st) => {
       lastState = st;
+
       for (const l of listeners) l(st);
     },
     onError,

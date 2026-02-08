@@ -82,7 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.opponentHands = new OpponentHandsView(this);
     this.handView = new HandView(this, {
       y: 620,
-      gap: 62,
+      gap: 58,
       width: 1100,
       onInvalidDiscard: () => this.showError('现在不是你出牌的回合。'),
       onDiscard: ({ displayIndex, serverIndex, tile }) => {
@@ -152,7 +152,8 @@ export class GameScene extends Phaser.Scene {
     this.pengPrompt.update(st);
 
     // Hand + other views
-    this.handView.update(st?.yourHand ?? [], canDiscard, st?.yourMelds ?? []);
+    const melds = (st && st.yourSeat !== null && st.meldsBySeat) ? (st.meldsBySeat[st.yourSeat] ?? []) : (st?.yourMelds ?? []);
+    this.handView.update(st?.yourHand ?? [], canDiscard, melds);
     this.opponentHands.update(st);
     this.discardsView.update(st);
     this.turnCompass.update(st, this);

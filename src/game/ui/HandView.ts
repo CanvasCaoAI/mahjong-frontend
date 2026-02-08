@@ -75,7 +75,7 @@ export class HandView {
     const meldTileW = 56;
     const meldTileH = 72;
     // 碰牌加一点间距
-    const meldGap = gap + 2;
+    const meldGap = gap + 6;
 
     const flatMeldTiles: Tile[] = [];
     for (const m of melds) flatMeldTiles.push(...m.tiles);
@@ -101,7 +101,7 @@ export class HandView {
     // 只是图片高度降低，宽度不变
     const flatScaleY = 0.60;
     // 切掉碰牌图片顶部（像“摊开”被桌面挡住一点）
-    const cropTopPx = 18;
+    const cropTopPx = 12;
 
     // 底部白色矩形：宽度同麻将，高度先定 20 看效果
     const baseH = 20;
