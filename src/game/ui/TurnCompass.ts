@@ -13,7 +13,8 @@ export class TurnCompass {
     top: Phaser.GameObjects.Text;
     left: Phaser.GameObjects.Text;
   };
-  private wallText: Phaser.GameObjects.Text;
+  private wallLabelText: Phaser.GameObjects.Text;
+  private wallCountText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
     const l = computeLayout(scene);
@@ -41,11 +42,19 @@ export class TurnCompass {
       left: mk(-54, 0),
     };
 
-    this.wallText = scene.add.text(0, 118, '剩余张数：-', {
+    // “剩余张数”这几个字：改成黄色，并缩小 40%（28px -> ~17px）
+    this.wallLabelText = scene.add.text(0, 118, '剩余张数：', {
+      fontSize: '17px',
+      color: '#FACC15',
+      fontStyle: '900'
+    }).setOrigin(0, 0.5);
+
+    // 数字部分保持原大小（便于读数）
+    this.wallCountText = scene.add.text(0, 118, '-', {
       fontSize: '28px',
       color: '#0B1020',
       fontStyle: '900'
-    }).setOrigin(0.5);
+    }).setOrigin(0, 0.5);
 
     this.container.add([
       ring,
@@ -54,7 +63,8 @@ export class TurnCompass {
       this.labels.right,
       this.labels.top,
       this.labels.left,
-      this.wallText,
+      this.wallLabelText,
+      this.wallCountText,
     ]);
 
     this.container.setDepth(5);
@@ -98,7 +108,16 @@ export class TurnCompass {
       }
     }
 
-    this.wallText.setText(`剩余张数：${st?.wallCount ?? '-'}`);
+    this.wallCountText.setText(String(st?.wallCount ?? '-'));
+
+    // 动态居中对齐：让「剩余张数：」+「数字」整体仍然以 x=0 为中心
+    const labelW = this.wallLabelText.width;
+    const countW = this.wallCountText.width;
+    const totalW = labelW + countW;
+    const leftX = -totalW / 2;
+
+    this.wallLabelText.setX(leftX);
+    this.wallCountText.setX(leftX + labelW);
   }
 
   destroy() {
