@@ -86,8 +86,9 @@ export class DiscardsView {
     const l = computeLayout(this.scene);
 
     // Tile visual size (in-game)
-    const tileW = 28;
-    const tileH = 36;
+    // 需求：弃牌区牌面稍微放大 10%，位置仍然动态计算
+    const tileW = Math.round(28 * 1.1);
+    const tileH = Math.round(36 * 1.1);
 
     // No-gap spacing (tiles touch each other)
     const dx = tileW;
