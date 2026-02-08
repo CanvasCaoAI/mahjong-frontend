@@ -7,18 +7,71 @@ export class DiscardsView {
   private sprites: Phaser.GameObjects.Image[] = [];
   private scene: Phaser.Scene;
 
+  // 黄色倒三角：指示“最后一张打出的牌”
+  private lastDiscardMarker: Phaser.GameObjects.Triangle | null = null;
+  private lastDiscardMarkerTween: Phaser.Tweens.Tween | null = null;
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
+
+  private attachLastDiscardMarker(tileX: number, tileY: number, tileH: number) {
+    // 倒三角（尖朝下）
+    const y = tileY - tileH / 2 - 10;
+    const x = tileX;
+
+    const triW = 16;
+    const triH = 12;
+
+    const t = this.scene.add.triangle(
+      x,
+      y,
+      // local points: (0,0) top-left
+      0,
+      0,
+      triW,
+      0,
+      triW / 2,
+      triH,
+      0xFACC15 // yellow-400
+    );
+
+    t.setOrigin(0.5, 0.5);
+    t.setAlpha(0.95);
+    t.setDepth(200);
+
+    this.lastDiscardMarker = t;
+    this.lastDiscardMarkerTween = this.scene.tweens.add({
+      targets: t,
+      scaleX: 1.35,
+      scaleY: 1.35,
+      duration: 450,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
   }
 
   destroy() {
     this.sprites.forEach(s => s.destroy());
     this.sprites = [];
+
+    this.lastDiscardMarkerTween?.stop();
+    this.lastDiscardMarkerTween = null;
+    this.lastDiscardMarker?.destroy();
+    this.lastDiscardMarker = null;
   }
 
   update(st: PublicState | null) {
     this.sprites.forEach(s => s.destroy());
     this.sprites = [];
+
+    // 先清理 marker（每次 update 会重建牌河视图）
+    this.lastDiscardMarkerTween?.stop();
+    this.lastDiscardMarkerTween = null;
+    this.lastDiscardMarker?.destroy();
+    this.lastDiscardMarker = null;
+
     if (!st || st.yourSeat === null) return;
 
     const you = st.yourSeat as Seat;
@@ -27,6 +80,8 @@ export class DiscardsView {
 
     const bySeat: Record<number, Tile[]> = { 0: [], 1: [], 2: [], 3: [] };
     for (const d of st.discards ?? []) bySeat[d.seat].push(d.tile);
+
+    const lastDiscard = (st.discards && st.discards.length) ? st.discards[st.discards.length - 1] : null;
 
     const l = computeLayout(this.scene);
 
@@ -64,6 +119,11 @@ export class DiscardsView {
           img.setDisplaySize(tileW, tileH);
           img.setAlpha(0.95);
           this.sprites.push(img);
+
+          // 最后一张打出的牌：上方悬浮黄色倒三角（不停缩放）
+          if (lastDiscard && lastDiscard.seat === seat && i === tiles.length - 1) {
+            this.attachLastDiscardMarker(img.x, img.y, tileH);
+          }
         }
       } else if (r === 1 || r === 3) {
         // left/right: top->bottom
@@ -79,6 +139,11 @@ export class DiscardsView {
           img.setDisplaySize(tileW, tileH);
           img.setAlpha(0.95);
           this.sprites.push(img);
+
+          // 最后一张打出的牌：上方悬浮黄色倒三角（不停缩放）
+          if (lastDiscard && lastDiscard.seat === seat && i === tiles.length - 1) {
+            this.attachLastDiscardMarker(img.x, img.y, tileH);
+          }
         }
       }
     }

@@ -58,11 +58,12 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(w / 2, h / 2, tableBgKey);
     bg.setDisplaySize(w, h);
 
-    // No top-left HUD text; keep only message line for errors/system info.
+    // 顶部左上角不显示任何信息（按需求保持空白）。
     this.hudText = this.add.text(0, 0, '', { fontSize: '14px', color: '#AAB3C7' });
     this.hudText.setVisible(false);
 
     this.msgText = this.add.text(margin, margin, '', { fontSize: '16px', color: '#E2E8F0', wordWrap: { width: w - margin * 2 } });
+    this.msgText.setVisible(false);
 
     // Components
     this.winPrompt = new WinPrompt(this, {
@@ -102,7 +103,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showError(msg: string) {
-    this.msgText.setText(`⚠️ ${msg}`);
+    // 不在左上角显示任何文本；错误仅输出到控制台。
+    console.warn('[mahjong-frontend]', msg);
   }
 
   private updateUI() {
@@ -121,7 +123,7 @@ export class GameScene extends Phaser.Scene {
       `连接：${connected ? '✅' : '❌'}  |  你：${youPos}  |  牌堆：${st?.wallCount ?? '-'}\n${players}`
     );
 
-    this.msgText.setText(st?.message ?? (connected ? '等待服务器状态…' : '回到大厅点击“连接”。'));
+    // 顶部不显示 message。
 
     // Phase state
     const canDraw = !!(connected && st && st.started && st.yourSeat !== null && st.turn === st.yourSeat && st.phase === 'draw');
@@ -146,9 +148,7 @@ export class GameScene extends Phaser.Scene {
     this.discardsView.update(st);
     this.turnCompass.update(st, this);
 
-    if (st?.result) {
-      this.msgText.setText(`🎉 ${seatName(st.result.winnerSeat as Seat)} 胡了（${st.result.reason}）`);
-    }
+    // 不在左上角显示胜负信息（保持空白）。
   }
 
   private animateDiscard(displayIndex: number, serverIndex: number, _tile: Tile) {
