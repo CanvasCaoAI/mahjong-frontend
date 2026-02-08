@@ -9,6 +9,19 @@ function startGame() {
   if (lobbyRoot) lobbyRoot.style.display = 'none';
   if (appRoot) appRoot.style.display = 'flex';
 
+  // Best-effort: lock to landscape on mobile.
+  try {
+    (screen as any)?.orientation?.lock?.('landscape');
+  } catch {}
+
+  // If opened in portrait, rotate the whole game container to behave like landscape.
+  const applyForceLandscape = () => {
+    const portrait = window.innerHeight > window.innerWidth;
+    document.body.classList.toggle('force-landscape', portrait);
+  };
+  applyForceLandscape();
+  window.addEventListener('resize', applyForceLandscape);
+
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     parent: 'app',
@@ -16,10 +29,10 @@ function startGame() {
     // No Phaser DOM UI anymore; lobby is real DOM.
     dom: { createContainer: false },
     scale: {
-      mode: Phaser.Scale.FIT,
-      autoCenter: Phaser.Scale.CENTER_BOTH,
-      width: 1100,
-      height: 700
+      // Fullscreen canvas: resize to parent container.
+      mode: Phaser.Scale.RESIZE,
+      width: window.innerWidth,
+      height: window.innerHeight
     },
     scene: [GameScene]
   };

@@ -8,6 +8,7 @@ import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
 import { OpponentHandsView } from '../ui/OpponentHandsView';
 import { HandView } from '../ui/HandView';
+import { computeLayout } from '../ui/layout';
 
 const tableBgKey = 'table_bg';
 const tableBgUrl = '/assets/ui/table-solid-darkgreen.svg';
@@ -16,8 +17,6 @@ const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北'
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
 
 export class GameScene extends Phaser.Scene {
-  // Layout
-  private readonly DISCARD = { x: 550, y: 330, cols: 6, gapX: 34, gapY: 44 };
 
   private _stateUnsub: (() => void) | null = null;
   private state: PublicState | null = null;
@@ -76,10 +75,12 @@ export class GameScene extends Phaser.Scene {
     this.discardsView = new DiscardsView(this);
     this.turnCompass = new TurnCompass(this);
     this.opponentHands = new OpponentHandsView(this);
+
+    const l0 = computeLayout(this);
     this.handView = new HandView(this, {
-      y: 620,
+      y: l0.handY,
       gap: 58,
-      width: 1100,
+      width: l0.w,
       onInvalidDiscard: () => this.showError('现在不是你出牌的回合。'),
       onDiscard: ({ displayIndex, serverIndex, tile }) => {
         this.animateDiscard(displayIndex, serverIndex, tile);
@@ -145,9 +146,13 @@ export class GameScene extends Phaser.Scene {
 
     this.actionPrompt.update(st);
 
+    const l = computeLayout(this);
+
     // Hand + other views
+    this.handView.setLayout({ y: l.handY, gap: 58, width: l.w });
     const melds = (st && st.yourSeat !== null && st.meldsBySeat) ? (st.meldsBySeat[st.yourSeat] ?? []) : (st?.yourMelds ?? []);
     this.handView.update(st?.yourHand ?? [], canDiscard, melds);
+
     this.opponentHands.update(st);
     this.discardsView.update(st);
     this.turnCompass.update(st, this);
@@ -175,11 +180,18 @@ export class GameScene extends Phaser.Scene {
     btn.setSelected(true);
 
     const nextIdx = (st.discards?.length ?? 0);
-    const startX = this.DISCARD.x - (this.DISCARD.cols - 1) * this.DISCARD.gapX * 0.5;
-    const r = Math.floor(nextIdx / this.DISCARD.cols);
-    const c = nextIdx % this.DISCARD.cols;
-    const tx = startX + c * this.DISCARD.gapX;
-    const ty = (this.DISCARD.y + 50) + r * this.DISCARD.gapY;
+    const l = computeLayout(this);
+
+    // Animate to bottom discard band, centered.
+    const cols = l.discardCols;
+    const gapX = l.discardTileGapX;
+    const gapY = l.discardTileGapY;
+
+    const startX = Math.round(l.w / 2 - ((cols - 1) * gapX) / 2);
+    const r = Math.floor(nextIdx / cols);
+    const c = nextIdx % cols;
+    const tx = startX + c * gapX;
+    const ty = l.discardBottomY + r * gapY;
 
     const fx = btn.container.x;
     const fy = btn.container.y;

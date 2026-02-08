@@ -21,6 +21,12 @@ export class HandView {
     onInvalidDiscard?: () => void;
   };
 
+  setLayout(layout: { y: number; gap: number; width: number }) {
+    this.opts.y = layout.y;
+    this.opts.gap = layout.gap;
+    this.opts.width = layout.width;
+  }
+
   constructor(
     scene: Phaser.Scene,
     opts: {
