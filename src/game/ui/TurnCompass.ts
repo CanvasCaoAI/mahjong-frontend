@@ -42,17 +42,21 @@ export class TurnCompass {
       left: mk(-54, 0),
     };
 
-    // “剩余张数”这几个字：改成黄色，并缩小 40%（28px -> ~17px）
-    this.wallLabelText = scene.add.text(0, 118, '剩余张数：', {
+    // “剩余张数：数字”这一行：往上移动一点点，但不要和 compass 重叠
+    // ring 半径 86；这里放在 110（较原 118 上移 8px），与 ring 保持间距
+    const wallY = 110;
+
+    // “剩余张数”这几个字：黄色，并缩小 40%（28px -> ~17px）
+    this.wallLabelText = scene.add.text(0, wallY, '剩余张数：', {
       fontSize: '17px',
       color: '#FACC15',
       fontStyle: '900'
     }).setOrigin(0, 0.5);
 
-    // 数字部分保持原大小（便于读数）
-    this.wallCountText = scene.add.text(0, 118, '-', {
-      fontSize: '28px',
-      color: '#0B1020',
+    // 数字部分：同样黄色、同样大小
+    this.wallCountText = scene.add.text(0, wallY, '-', {
+      fontSize: '17px',
+      color: '#FACC15',
       fontStyle: '900'
     }).setOrigin(0, 0.5);
 
