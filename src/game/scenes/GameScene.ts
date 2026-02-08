@@ -3,8 +3,7 @@ import type { PublicState, Seat, Tile } from '../../domain/types';
 import { ALL_TILES, backKey, backUrl, tileKey, tileUrl } from '../../domain/tileset';
 import { client, onState } from '../../net/clientSingleton';
 
-import { WinPrompt } from '../ui/WinPrompt';
-import { PengPrompt } from '../ui/PengPrompt';
+import { ActionPrompt } from '../ui/ActionPrompt';
 import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
 import { OpponentHandsView } from '../ui/OpponentHandsView';
@@ -29,8 +28,7 @@ export class GameScene extends Phaser.Scene {
   private animatingDiscard = false;
   private autoDrawToken: string | null = null;
 
-  private winPrompt!: WinPrompt;
-  private pengPrompt!: PengPrompt;
+  private actionPrompt!: ActionPrompt;
   private discardsView!: DiscardsView;
   private turnCompass!: TurnCompass;
   private opponentHands!: OpponentHandsView;
@@ -68,13 +66,11 @@ export class GameScene extends Phaser.Scene {
     this.msgText.setVisible(false);
 
     // Components
-    this.winPrompt = new WinPrompt(this, {
+    this.actionPrompt = new ActionPrompt(this, {
       onHu: () => client.checkWin(),
-    });
-
-    this.pengPrompt = new PengPrompt(this, {
       onPeng: () => client.peng(),
-      onPass: () => client.passClaim(),
+      onChi: () => client.chi(),
+      onPassClaim: () => client.passClaim(),
     });
 
     this.discardsView = new DiscardsView(this);
@@ -99,8 +95,7 @@ export class GameScene extends Phaser.Scene {
       this._stateUnsub?.();
       this._stateUnsub = null;
 
-      this.winPrompt?.destroy();
-      this.pengPrompt?.destroy();
+      this.actionPrompt?.destroy();
       this.discardsView?.destroy();
       this.turnCompass?.destroy();
       this.opponentHands?.destroy();
@@ -148,8 +143,7 @@ export class GameScene extends Phaser.Scene {
       this.autoDrawToken = null;
     }
 
-    this.winPrompt.update(st);
-    this.pengPrompt.update(st);
+    this.actionPrompt.update(st);
 
     // Hand + other views
     const melds = (st && st.yourSeat !== null && st.meldsBySeat) ? (st.meldsBySeat[st.yourSeat] ?? []) : (st?.yourMelds ?? []);

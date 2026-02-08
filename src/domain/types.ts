@@ -25,6 +25,7 @@ export type PublicState = {
   handCounts: number[]; // 0-3
   winAvailable: boolean;
   pengAvailable: boolean;
+  chiAvailable: boolean;
   message: string;
   result?: { winnerSeat: Seat; hand: Tile[]; reason: string };
 };

@@ -13,3 +13,9 @@ export function getRoomId(): string {
   const fromUrl = url.searchParams.get('room');
   return (fromUrl && fromUrl.trim()) ? fromUrl.trim() : 'main';
 }
+
+export function isDebugMode(): boolean {
+  const url = new URL(location.href);
+  const v = (url.searchParams.get('debug') ?? '').trim().toLowerCase();
+  return v === '1' || v === 'true' || v === 'yes' || v === 'on';
+}
