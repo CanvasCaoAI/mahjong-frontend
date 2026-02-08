@@ -4,6 +4,7 @@ import { ALL_TILES, backKey, backUrl, tileKey, tileUrl } from '../../domain/tile
 import { client, onState } from '../../net/clientSingleton';
 
 import { WinPrompt } from '../ui/WinPrompt';
+import { PengPrompt } from '../ui/PengPrompt';
 import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
 import { OpponentHandsView } from '../ui/OpponentHandsView';
@@ -29,6 +30,7 @@ export class GameScene extends Phaser.Scene {
   private autoDrawToken: string | null = null;
 
   private winPrompt!: WinPrompt;
+  private pengPrompt!: PengPrompt;
   private discardsView!: DiscardsView;
   private turnCompass!: TurnCompass;
   private opponentHands!: OpponentHandsView;
@@ -70,6 +72,11 @@ export class GameScene extends Phaser.Scene {
       onHu: () => client.checkWin(),
     });
 
+    this.pengPrompt = new PengPrompt(this, {
+      onPeng: () => client.peng(),
+      onPass: () => client.passClaim(),
+    });
+
     this.discardsView = new DiscardsView(this);
     this.turnCompass = new TurnCompass(this);
     this.opponentHands = new OpponentHandsView(this);
@@ -93,6 +100,7 @@ export class GameScene extends Phaser.Scene {
       this._stateUnsub = null;
 
       this.winPrompt?.destroy();
+      this.pengPrompt?.destroy();
       this.discardsView?.destroy();
       this.turnCompass?.destroy();
       this.opponentHands?.destroy();
@@ -141,9 +149,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.winPrompt.update(st);
+    this.pengPrompt.update(st);
 
     // Hand + other views
-    this.handView.update(st?.yourHand ?? [], canDiscard);
+    this.handView.update(st?.yourHand ?? [], canDiscard, st?.yourMelds ?? []);
     this.opponentHands.update(st);
     this.discardsView.update(st);
     this.turnCompass.update(st, this);

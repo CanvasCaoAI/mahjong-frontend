@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
-import type { Tile } from '../../domain/types';
+import type { Meld, Tile } from '../../domain/types';
+import { tileKey } from '../../domain/tileset';
 import { TileButton } from './TileButton';
 
 export class HandView {
   private buttons: TileButton[] = [];
+  private meldSprites: Phaser.GameObjects.GameObject[] = [];
   private selected: TileButton | null = null;
 
   private scene: Phaser.Scene;
@@ -32,6 +34,10 @@ export class HandView {
   destroy() {
     this.buttons.forEach(b => b.destroy());
     this.buttons = [];
+
+    this.meldSprites.forEach(s => s.destroy());
+    this.meldSprites = [];
+
     this.selected = null;
   }
 
@@ -43,7 +49,7 @@ export class HandView {
     return this.buttons[displayIndex];
   }
 
-  update(handRaw: Tile[], canDiscard: boolean) {
+  update(handRaw: Tile[], canDiscard: boolean, melds: Meld[] = []) {
     // re-render for now (simple); later can optimize.
     this.destroy();
 
@@ -63,12 +69,79 @@ export class HandView {
     const gap = this.opts.gap;
     const tableW = this.opts.width;
 
+    // === Melds (e.g. 碰) ===
+    // 需求：显示在手牌左边；与手牌不连起来；视觉上像“摊开”(平放)
+    // 碰牌展示尺寸：宽度与手牌一致；高度通过 scaleY 压扁（宽度不变）
+    const meldTileW = 56;
+    const meldTileH = 72;
+    // 碰牌加一点间距
+    const meldGap = gap + 2;
+
+    const flatMeldTiles: Tile[] = [];
+    for (const m of melds) flatMeldTiles.push(...m.tiles);
+    const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + meldTileW : 0;
+
     const totalW = hand.length > 0 ? (hand.length - 1) * gap + 60 : 0;
     const margin = Math.round(tableW * 0.03);
-    const minX = margin;
-    const maxX = tableW - margin - totalW;
-    const centered = (tableW - totalW) / 2;
-    const startX = Math.max(minX, Math.min(centered, maxX));
+
+    // 碰牌与手牌之间的断开距离
+    const groupGap = flatMeldTiles.length ? 36 : 0;
+
+    // 让（meld + gap + hand）整体尽量居中
+    const wholeW = meldW + groupGap + totalW;
+    const centeredWholeStart = (tableW - wholeW) / 2;
+    const startWholeX = Math.max(margin, centeredWholeStart);
+
+    // meld 起点 / hand 起点
+    const meldStartX = startWholeX;
+    const startX = meldStartX + meldW + groupGap;
+
+    // render meld tiles (flat)
+    // 需求：看上去更“扁”，并且底部有一个白色的矩形方块
+    // 只是图片高度降低，宽度不变
+    const flatScaleY = 0.60;
+    // 切掉碰牌图片顶部（像“摊开”被桌面挡住一点）
+    const cropTopPx = 18;
+
+    // 底部白色矩形：宽度同麻将，高度先定 20 看效果
+    const baseH = 20;
+    const baseInset = 0;
+
+    for (let i = 0; i < flatMeldTiles.length; i++) {
+      const x = meldStartX + i * meldGap + meldTileW / 2;
+      const key = tileKey(flatMeldTiles[i] as any);
+
+      const img = this.scene.add.image(x, y, key);
+      // 不转 90 度
+      img.setDisplaySize(meldTileW, meldTileH);
+
+      // 切掉顶部：crop 使用的是原始纹理像素尺寸（frame），不是 displaySize
+      const fw = img.frame.width;
+      const fh = img.frame.height;
+      const cropTop = Math.max(0, Math.min(cropTopPx, fh - 1));
+      img.setCrop(0, cropTop, fw, fh - cropTop);
+
+      // 只压高度，宽度不变
+      img.setScale(1, flatScaleY);
+      img.setAlpha(0.98);
+      img.setDepth(60);
+
+      // white base block (under the tile) —— 放在牌下面，不要盖住牌面
+      const tileRenderH = meldTileH * flatScaleY;
+      // 视觉上麻将牌外框宽度接近 TileButton 的 60px（而不是牌面 56px）
+      const baseW = (meldTileW + 6) - baseInset * 2;
+      const base = this.scene.add.rectangle(
+        x,
+        y + tileRenderH * 0.5 + baseH * 0.5 - 1,
+        baseW,
+        baseH,
+        0xFFFFFF,
+        0.95
+      );
+      base.setDepth(59);
+
+      this.meldSprites.push(base, img);
+    }
 
     for (let i = 0; i < hand.length; i++) {
       const x = startX + i * gap;

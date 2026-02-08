@@ -42,4 +42,12 @@ export class MahjongClient {
   checkWin() {
     this.socket?.emit('checkWin');
   }
+
+  peng() {
+    this.socket?.emit('peng');
+  }
+
+  passClaim() {
+    this.socket?.emit('passClaim');
+  }
 }
