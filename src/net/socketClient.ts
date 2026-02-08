@@ -40,7 +40,8 @@ export class MahjongClient {
   }
 
   checkWin() {
-    this.socket?.emit('checkWin');
+    // 统一走 hu：支持自摸胡 + 点炮胡
+    this.socket?.emit('hu');
   }
 
   peng() {
