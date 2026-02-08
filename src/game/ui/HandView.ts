@@ -8,6 +8,10 @@ export class HandView {
   private meldSprites: Phaser.GameObjects.GameObject[] = [];
   private selected: TileButton | null = null;
 
+  // 用于“新摸的那张牌”不参与排序，放到最右侧显示
+  private lastHandRaw: Tile[] | null = null;
+  private pendingDrawIndex: number | null = null;
+
   private scene: Phaser.Scene;
   private opts: {
     y: number;
@@ -53,17 +57,40 @@ export class HandView {
     // re-render for now (simple); later can optimize.
     this.destroy();
 
-    // Auto-sort hand for display, but keep original indices for server actions.
-    const hand = handRaw.map((tile, idx) => ({ tile, idx })).sort((a, b) => {
-      const sa = a.tile[0];
-      const sb = b.tile[0];
-      const na = Number(a.tile.slice(1));
-      const nb = Number(b.tile.slice(1));
-      const suitOrder: Record<string, number> = { m: 0, p: 1, s: 2, z: 3 };
-      const ds = (suitOrder[sa] ?? 99) - (suitOrder[sb] ?? 99);
-      if (ds) return ds;
-      return na - nb;
-    });
+    // Detect freshly drawn tile: server draw appends to the end.
+    // Requirement: 新摸的那张牌显示在最右侧，等到打牌之后再排序。
+    if (this.lastHandRaw && handRaw.length === this.lastHandRaw.length + 1) {
+      // Heuristic: draw() pushes at the end in server implementation.
+      this.pendingDrawIndex = handRaw.length - 1;
+    }
+
+    // If not in a discard-able state with 14 tiles, don't treat any tile as "fresh draw".
+    const isFreshDrawState = canDiscard && handRaw.length >= 14;
+    if (!isFreshDrawState) this.pendingDrawIndex = null;
+
+    const drawn = (this.pendingDrawIndex !== null && this.pendingDrawIndex >= 0 && this.pendingDrawIndex < handRaw.length)
+      ? { tile: handRaw[this.pendingDrawIndex] as Tile, idx: this.pendingDrawIndex }
+      : null;
+
+    // Auto-sort hand for display (excluding the drawn tile), but keep original indices for server actions.
+    const base = handRaw
+      .map((tile, idx) => ({ tile, idx }))
+      .filter((x) => !drawn || x.idx !== drawn.idx)
+      .sort((a, b) => {
+        const sa = a.tile[0];
+        const sb = b.tile[0];
+        const na = Number(a.tile.slice(1));
+        const nb = Number(b.tile.slice(1));
+        const suitOrder: Record<string, number> = { m: 0, p: 1, s: 2, z: 3 };
+        const ds = (suitOrder[sa] ?? 99) - (suitOrder[sb] ?? 99);
+        if (ds) return ds;
+        return na - nb;
+      });
+
+    const hand = drawn ? [...base, drawn] : base;
+
+    // Store for next diff
+    this.lastHandRaw = handRaw.slice();
 
     const y = this.opts.y;
     const gap = this.opts.gap;
@@ -144,7 +171,9 @@ export class HandView {
     }
 
     for (let i = 0; i < hand.length; i++) {
-      const x = startX + i * gap;
+      // 最右侧“新摸牌”稍微与其他牌拉开一点，视觉上更明显
+      const extraGap = (drawn && i === hand.length - 1) ? 18 : 0;
+      const x = startX + i * gap + extraGap;
       const { tile, idx: serverIndex } = hand[i];
 
       const btn = new TileButton(this.scene, x + 30, y, `tile_${tile}` as any, () => {
