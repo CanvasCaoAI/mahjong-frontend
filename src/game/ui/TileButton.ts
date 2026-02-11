@@ -16,18 +16,24 @@ export class TileButton {
     y: number,
     textureKey: string,
     onClick: () => void,
+    opts?: { w?: number; h?: number; imgW?: number; imgH?: number }
   ) {
     this.baseY = y;
     this.baseDepth = 0;
 
-    this.bg = scene.add.rectangle(0, 0, 60, 78, 0x0b1020, 0.0)
+    const w = Math.round(opts?.w ?? 60);
+    const h = Math.round(opts?.h ?? 78);
+    const imgW = Math.round(opts?.imgW ?? (w - 4));
+    const imgH = Math.round(opts?.imgH ?? (h - 6));
+
+    this.bg = scene.add.rectangle(0, 0, w, h, 0x0b1020, 0.0)
       .setStrokeStyle(2, 0xffffff, 0.10);
 
     this.img = scene.add.image(0, 0, textureKey);
-    this.img.setDisplaySize(56, 72);
+    this.img.setDisplaySize(imgW, imgH);
 
     this.container = scene.add.container(x, y, [this.bg, this.img]);
-    this.container.setSize(60, 78);
+    this.container.setSize(w, h);
     this.container.setInteractive({ useHandCursor: true });
 
     this.container.on('pointerdown', () => {

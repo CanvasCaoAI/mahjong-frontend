@@ -23,7 +23,7 @@ export class GameScene extends Phaser.Scene {
 
   private hudText!: Phaser.GameObjects.Text;
   private msgText!: Phaser.GameObjects.Text;
-  private winReasonText: Phaser.GameObjects.Text | null = null;
+  private winTexts: Partial<Record<Seat, Phaser.GameObjects.Text>> = {};
 
   private animatingDiscard = false;
   private autoDrawToken: string | null = null;
@@ -81,7 +81,7 @@ export class GameScene extends Phaser.Scene {
     const l0 = computeLayout(this);
     this.handView = new HandView(this, {
       y: l0.handY,
-      gap: 58,
+      gap: l0.handGap,
       width: l0.w,
       onInvalidDiscard: () => this.showError('现在不是你出牌的回合。'),
       onDiscard: ({ displayIndex, serverIndex, tile }) => {
@@ -103,8 +103,11 @@ export class GameScene extends Phaser.Scene {
       this.turnCompass?.destroy();
       this.opponentHands?.destroy();
       this.handView?.destroy();
-      this.winReasonText?.destroy();
-      this.winReasonText = null;
+
+      for (const k of Object.keys(this.winTexts) as any) {
+        this.winTexts[k as Seat]?.destroy();
+      }
+      this.winTexts = {};
     });
 
     this.updateUI();
@@ -153,7 +156,7 @@ export class GameScene extends Phaser.Scene {
     const l = computeLayout(this);
 
     // Hand + other views
-    this.handView.setLayout({ y: l.handY, gap: 58, width: l.w });
+    this.handView.setLayout({ y: l.handY, gap: l.handGap, width: l.w });
     const melds = (st && st.yourSeat !== null && st.meldsBySeat) ? (st.meldsBySeat[st.yourSeat] ?? []) : (st?.yourMelds ?? []);
     this.handView.update(st?.yourHand ?? [], canDiscard, melds);
 
@@ -161,29 +164,53 @@ export class GameScene extends Phaser.Scene {
     this.discardsView.update(st);
     this.turnCompass.update(st, this);
 
-    // 胡牌提示：如果你是胡家，在自己手牌附近用黄色文字显示和牌内容
-    const isWinner = !!(st?.result && st.yourSeat !== null && st.result.winners.includes(st.yourSeat));
-    if (isWinner) {
-      const reason = st?.result?.reason ?? '';
-      const x = l.w / 2;
-      const y = l.handY - 96;
+    // 和牌文字：大小一致，摆在中间罗盘的上下左右（只给胡家显示）
+    // 注意：和牌内容（reason）已抽到 st.winInfo，不再写在 st.result 里。
+    const winners = st?.result?.winners ?? [];
+    const reason = st?.winInfo?.reason ?? '';
 
-      if (!this.winReasonText) {
-        this.winReasonText = this.add.text(x, y, '', {
-          fontSize: '20px',
-          color: '#FBBF24',
-          fontStyle: 'bold',
-          stroke: '#0B1020',
-          strokeThickness: 5,
-        }).setOrigin(0.5);
-        this.winReasonText.setDepth(200);
+    // 只有在 end 阶段且有 reason 时展示
+    const showWinText = !!(st && st.phase === 'end' && reason);
+
+    // 清空/隐藏
+    for (const seat of [0, 1, 2, 3] as const) {
+      const t = this.winTexts[seat];
+      if (t) t.setVisible(false);
+    }
+
+    if (showWinText && st && st.yourSeat !== null) {
+      const you = st.yourSeat as Seat;
+      const rel = (seat: Seat) => ((you as number) - (seat as number) + 4) % 4; // 0=bottom,1=left,2=top,3=right
+
+      const cx = l.compassX;
+      const cy = l.compassY;
+      const minDim = Math.min(l.w, l.h);
+      const offY = Math.round(minDim * 0.22);
+      const offX = Math.round(minDim * 0.42);
+
+      const posFor = (seat: Seat) => {
+        const r = rel(seat);
+        if (r === 0) return { x: cx, y: cy + offY };
+        if (r === 2) return { x: cx, y: cy - offY };
+        if (r === 1) return { x: cx - offX, y: cy };
+        return { x: cx + offX, y: cy };
+      };
+
+      for (const w of winners) {
+        if (!this.winTexts[w]) {
+          this.winTexts[w] = this.add.text(0, 0, '', {
+            fontSize: '36px',
+            color: '#FBBF24',
+            fontStyle: 'bold',
+          }).setOrigin(0.5);
+          this.winTexts[w]!.setDepth(200);
+        }
+
+        const p = posFor(w);
+        this.winTexts[w]!.setPosition(p.x, p.y);
+        this.winTexts[w]!.setText(reason);
+        this.winTexts[w]!.setVisible(true);
       }
-
-      this.winReasonText.setPosition(x, y);
-      this.winReasonText.setText(reason ? `和牌：${reason}` : '和牌');
-      this.winReasonText.setVisible(true);
-    } else {
-      if (this.winReasonText) this.winReasonText.setVisible(false);
     }
 
     // 不在左上角显示胜负信息（保持空白）。

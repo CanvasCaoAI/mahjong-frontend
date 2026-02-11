@@ -121,6 +121,16 @@ export class ActionPrompt {
   update(st: PublicState | null) {
     const l = computeLayout(this.scene);
 
+    // Mobile-friendly scaling for action buttons
+    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const s = clamp(minDim / 900, 0.62, 1.0);
+    this.huBtn.setScale(s);
+    this.gangBtn.setScale(s);
+    this.pengBtn.setScale(s);
+    this.chiBtn.setScale(s);
+    this.passBtn.setScale(s);
+
     const token = this.currentToken();
 
     const canShowAny = !!(st && (st.winAvailable || st.gangAvailable || st.pengAvailable || st.chiAvailable));

@@ -27,5 +27,6 @@ export type PublicState = {
   pengAvailable: boolean;
   chiAvailable: boolean;
   message: string;
-  result?: { winners: Seat[]; handsBySeat: Partial<Record<Seat, Tile[]>>; reason: string };
+  result?: { winners: Seat[]; handsBySeat: Partial<Record<Seat, Tile[]>> };
+  winInfo?: { reason: string };
 };
