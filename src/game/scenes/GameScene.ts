@@ -23,6 +23,7 @@ export class GameScene extends Phaser.Scene {
 
   private hudText!: Phaser.GameObjects.Text;
   private msgText!: Phaser.GameObjects.Text;
+  private winReasonText: Phaser.GameObjects.Text | null = null;
 
   private animatingDiscard = false;
   private autoDrawToken: string | null = null;
@@ -102,6 +103,8 @@ export class GameScene extends Phaser.Scene {
       this.turnCompass?.destroy();
       this.opponentHands?.destroy();
       this.handView?.destroy();
+      this.winReasonText?.destroy();
+      this.winReasonText = null;
     });
 
     this.updateUI();
@@ -157,6 +160,31 @@ export class GameScene extends Phaser.Scene {
     this.opponentHands.update(st);
     this.discardsView.update(st);
     this.turnCompass.update(st, this);
+
+    // 胡牌提示：如果你是胡家，在自己手牌附近用黄色文字显示和牌内容
+    const isWinner = !!(st?.result && st.yourSeat !== null && st.result.winners.includes(st.yourSeat));
+    if (isWinner) {
+      const reason = st?.result?.reason ?? '';
+      const x = l.w / 2;
+      const y = l.handY - 96;
+
+      if (!this.winReasonText) {
+        this.winReasonText = this.add.text(x, y, '', {
+          fontSize: '20px',
+          color: '#FBBF24',
+          fontStyle: 'bold',
+          stroke: '#0B1020',
+          strokeThickness: 5,
+        }).setOrigin(0.5);
+        this.winReasonText.setDepth(200);
+      }
+
+      this.winReasonText.setPosition(x, y);
+      this.winReasonText.setText(reason ? `和牌：${reason}` : '和牌');
+      this.winReasonText.setVisible(true);
+    } else {
+      if (this.winReasonText) this.winReasonText.setVisible(false);
+    }
 
     // 不在左上角显示胜负信息（保持空白）。
   }
