@@ -1,6 +1,6 @@
 import type { PublicState, Seat } from './domain/types';
 import { client, connectToServer, onState } from './net/clientSingleton';
-import { getOrCreateClientId, getRoomId, isDebugMode } from './net/identity';
+import { getOrCreateClientId, getRoomId, isDebugMode, getDebugTileCount } from './net/identity';
 
 const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
@@ -75,7 +75,8 @@ export function mountLobby(opts: {
     const name = nameInput.value.trim() || nameInput.placeholder || '玩家';
     const roomId = getRoomId();
     const clientId = getOrCreateClientId();
-    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode() }, name, (msg) => {
+    const tile = getDebugTileCount();
+    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile }, name, (msg) => {
       status.textContent = `⚠️ ${msg}`;
       connecting = false;
       connectBtn.textContent = '重试连接';

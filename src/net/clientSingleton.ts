@@ -18,7 +18,7 @@ export function onState(cb: (st: PublicState) => void): () => void {
 
 export function connectToServer(
   serverUrl: string,
-  params: { roomId: string; clientId: string; debug?: boolean },
+  params: { roomId: string; clientId: string; debug?: boolean; tile?: number | null },
   name: string | undefined,
   onError: (msg: string) => void,
 ) {
