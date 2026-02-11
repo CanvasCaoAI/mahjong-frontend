@@ -28,3 +28,8 @@ body.force-landscape #app{
 .lobby-btn:disabled{opacity:.45;cursor:not-allowed}
 .lobby-status{font-size:13px;color:#334155;margin-bottom:8px}
 .lobby-players{font-size:13px;color:#0f172a}
+
+/* Debug checkboxes (shown only when ?debug=true) */
+.lobby-debug-opts{grid-column:2 / -1;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.lobby-debug-item{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid rgba(15,23,42,.12);border-radius:999px;background:rgba(15,23,42,.03);font-size:13px;color:#0f172a;user-select:none}
+.lobby-debug-item input[type="checkbox"]{width:16px;height:16px;margin:0}

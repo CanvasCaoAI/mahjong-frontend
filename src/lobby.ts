@@ -42,10 +42,11 @@ export function mountLobby(opts: {
   nameInput.value = '';
 
   const btnRow = el('div', 'lobby-buttons');
-  // Auto-connect on page load; keep buttons grouped.
+  // Auto-connect on page load (non-debug); keep buttons grouped.
   const connectBtn = el('button', 'lobby-btn');
-  connectBtn.textContent = '连接中…';
-  connectBtn.disabled = true;
+  const debugMode = isDebugMode();
+  connectBtn.textContent = debugMode ? '连接' : '连接中…';
+  connectBtn.disabled = !debugMode;
 
   const readyBtn = el('button', 'lobby-btn');
   readyBtn.textContent = '准备';
@@ -56,9 +57,38 @@ export function mountLobby(opts: {
 
   btnRow.append(connectBtn, readyBtn);
 
+  // Debug options (only when ?debug=true)
+  const debugOpts = el('div', 'lobby-debug-opts');
+
+  const tile5Label = el('label', 'lobby-debug-item');
+  const tile5Cb = el('input') as HTMLInputElement;
+  tile5Cb.type = 'checkbox';
+  tile5Cb.checked = false;
+  tile5Label.append(tile5Cb, document.createTextNode('tile=4'));
+
+  const sameTileLabel = el('label', 'lobby-debug-item');
+  const sameTileCb = el('input') as HTMLInputElement;
+  sameTileCb.type = 'checkbox';
+  sameTileCb.checked = false;
+  sameTileLabel.append(sameTileCb, document.createTextNode('sameTile=一万'));
+
+  debugOpts.append(tile5Label, sameTileLabel);
+
+  // If debug options change while connected, allow quick reconnect
+  const markReconnect = () => {
+    if (!debugMode) return;
+    if (client.connected && !connecting) {
+      connectBtn.textContent = '重新连接';
+      connectBtn.disabled = false;
+    }
+  };
+  tile5Cb.onchange = markReconnect;
+  sameTileCb.onchange = markReconnect;
+
   row.append(
     nameLabel,
     nameInput,
+    ...(debugMode ? [debugOpts] : []),
   );
 
   card.append(title, row, btnRow, status, players);
@@ -66,8 +96,9 @@ export function mountLobby(opts: {
 
   let connecting = false;
 
-  function doConnect() {
-    if (connecting || client.connected) return;
+  function doConnect(force = false) {
+    if (connecting) return;
+    if (!force && client.connected) return;
     connecting = true;
     connectBtn.textContent = '连接中…';
     connectBtn.disabled = true;
@@ -75,8 +106,9 @@ export function mountLobby(opts: {
     const name = nameInput.value.trim() || nameInput.placeholder || '玩家';
     const roomId = getRoomId();
     const clientId = getOrCreateClientId();
-    const tile = getDebugTileCount();
-    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile }, name, (msg) => {
+    const tile = debugMode ? (tile5Cb.checked ? 4 : null) : getDebugTileCount();
+    const sameTile = debugMode ? (sameTileCb.checked ? 'm1' : null) : null;
+    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile, sameTile }, name, (msg) => {
       status.textContent = `⚠️ ${msg}`;
       connecting = false;
       connectBtn.textContent = '重试连接';
@@ -101,8 +133,8 @@ export function mountLobby(opts: {
     // Update connect button state
     if (connected) {
       connecting = false;
-      connectBtn.textContent = '已连接';
-      connectBtn.disabled = true;
+      connectBtn.textContent = debugMode ? '已连接（可重连）' : '已连接';
+      connectBtn.disabled = !debugMode;
     }
 
     const allReady = st.players.filter(Boolean).length === 4 && st.players.every(p => !!p && p.ready);
@@ -113,12 +145,12 @@ export function mountLobby(opts: {
 
   const un = onState(render);
 
-  // Entering the page => auto connect
-  doConnect();
+  // Entering the page => auto connect (only when not in debug mode)
+  if (!debugMode) doConnect();
 
-  // Manual reconnect (only enabled on failure)
+  // Connect / reconnect
   connectBtn.onclick = () => {
-    doConnect();
+    doConnect(debugMode);
   };
 
   readyBtn.onclick = () => {
