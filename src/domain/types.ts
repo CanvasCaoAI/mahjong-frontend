@@ -4,11 +4,10 @@ export type Tile = `${Suit}${number}`; // m/p/s:1-9, z:1-7
 
 export type DiscardEvent = { seat: Seat; tile: Tile };
 
-export type Meld = {
-  type: 'peng';
-  tiles: [Tile, Tile, Tile];
-  fromSeat: Seat;
-};
+export type Meld =
+  | { type: 'peng'; tiles: [Tile, Tile, Tile]; fromSeat: Seat }
+  | { type: 'chi'; tiles: [Tile, Tile, Tile]; fromSeat: Seat }
+  | { type: 'gang'; tiles: [Tile, Tile, Tile, Tile]; fromSeat: Seat | null; kind: 'discard' | 'concealed' | 'add' };
 
 export type PublicState = {
   connected: boolean;
@@ -24,6 +23,7 @@ export type PublicState = {
   meldsBySeat: Meld[][];
   handCounts: number[]; // 0-3
   winAvailable: boolean;
+  gangAvailable: boolean;
   pengAvailable: boolean;
   chiAvailable: boolean;
   message: string;

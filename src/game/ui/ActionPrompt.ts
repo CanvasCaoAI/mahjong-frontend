@@ -4,6 +4,7 @@ import { computeLayout } from './layout';
 
 export class ActionPrompt {
   private huBtn: Phaser.GameObjects.Container;
+  private gangBtn: Phaser.GameObjects.Container;
   private pengBtn: Phaser.GameObjects.Container;
   private chiBtn: Phaser.GameObjects.Container;
   private passBtn: Phaser.GameObjects.Container;
@@ -12,6 +13,7 @@ export class ActionPrompt {
   private scene: Phaser.Scene;
 
   private readonly onHu: () => void;
+  private readonly onGang: () => void;
   private readonly onPeng: () => void;
   private readonly onChi: () => void;
   private readonly onPassClaim: () => void;
@@ -20,6 +22,7 @@ export class ActionPrompt {
     scene: Phaser.Scene,
     opts: {
       onHu: () => void;
+      onGang: () => void;
       onPeng: () => void;
       onChi: () => void;
       onPassClaim: () => void;
@@ -27,6 +30,7 @@ export class ActionPrompt {
   ) {
     this.scene = scene;
     this.onHu = opts.onHu;
+    this.onGang = opts.onGang;
     this.onPeng = opts.onPeng;
     this.onChi = opts.onChi;
     this.onPassClaim = opts.onPassClaim;
@@ -34,6 +38,12 @@ export class ActionPrompt {
     this.huBtn = this.makeRoundBtn(0, 0, 44, '胡', 0xB91C1C, () => {
       this.onHu();
       // 胡不需要 pass 标记；状态会推进
+      this.setVisible(false);
+    });
+
+    this.gangBtn = this.makeRoundBtn(0, 0, 44, '杠', 0x2563EB, () => {
+      this.onGang();
+      this.markPassed();
       this.setVisible(false);
     });
 
@@ -50,9 +60,9 @@ export class ActionPrompt {
     });
 
     this.passBtn = this.makeRoundBtn(0, 0, 36, '过', 0x0F766E, () => {
-      // 若当前处于 claim（碰/吃）则需要通知服务器 pass
+      // 若当前处于 claim（胡/杠/碰/吃）则需要通知服务器 pass
       const st = (this.scene as any).state as PublicState | null;
-      if (st && (st.pengAvailable || st.chiAvailable)) this.onPassClaim();
+      if (st && st.phase === 'claim') this.onPassClaim();
       this.markPassed();
       this.setVisible(false);
     });
@@ -92,6 +102,7 @@ export class ActionPrompt {
 
   private setVisible(v: boolean) {
     this.huBtn.setVisible(v);
+    this.gangBtn.setVisible(v);
     this.pengBtn.setVisible(v);
     this.chiBtn.setVisible(v);
     this.passBtn.setVisible(v);
@@ -101,6 +112,7 @@ export class ActionPrompt {
     const l = computeLayout(this.scene);
     // We will layout dynamically in update(); here just set a default anchor.
     this.huBtn.setPosition(l.winX, l.winY);
+    this.gangBtn.setPosition(l.winX, l.winY);
     this.pengBtn.setPosition(l.winX, l.winY);
     this.chiBtn.setPosition(l.winX, l.winY);
     this.passBtn.setPosition(l.winX, l.winY);
@@ -111,7 +123,7 @@ export class ActionPrompt {
 
     const token = this.currentToken();
 
-    const canShowAny = !!(st && (st.winAvailable || st.pengAvailable || st.chiAvailable));
+    const canShowAny = !!(st && (st.winAvailable || st.gangAvailable || st.pengAvailable || st.chiAvailable));
     const shouldShow = !!(canShowAny && (!this.passedToken || this.passedToken !== token));
 
     if (!shouldShow) {
@@ -120,6 +132,7 @@ export class ActionPrompt {
       // Determine which buttons should show
       // visible flags
       this.huBtn.setVisible(!!st?.winAvailable);
+      this.gangBtn.setVisible(!!st?.gangAvailable);
       this.pengBtn.setVisible(!!st?.pengAvailable);
       this.chiBtn.setVisible(!!st?.chiAvailable);
       this.passBtn.setVisible(true);
@@ -134,6 +147,7 @@ export class ActionPrompt {
       // actions 从 pass 左侧向左排
       const actions: Phaser.GameObjects.Container[] = [];
       if (st?.winAvailable) actions.push(this.huBtn);
+      if (st?.gangAvailable) actions.push(this.gangBtn);
       if (st?.pengAvailable) actions.push(this.pengBtn);
       if (st?.chiAvailable) actions.push(this.chiBtn);
 
@@ -156,6 +170,7 @@ export class ActionPrompt {
 
   destroy() {
     this.huBtn.destroy(true);
+    this.gangBtn.destroy(true);
     this.pengBtn.destroy(true);
     this.chiBtn.destroy(true);
     this.passBtn.destroy(true);

@@ -67,6 +67,7 @@ export class GameScene extends Phaser.Scene {
     // Components
     this.actionPrompt = new ActionPrompt(this, {
       onHu: () => client.checkWin(),
+      onGang: () => client.gang(),
       onPeng: () => client.peng(),
       onChi: () => client.chi(),
       onPassClaim: () => client.passClaim(),

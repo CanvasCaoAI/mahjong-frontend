@@ -65,12 +65,14 @@ export class HandView {
 
     // Detect freshly drawn tile: server draw appends to the end.
     // Requirement: 新摸的那张牌显示在最右侧，等到打牌之后再排序。
-    if (this.lastHandRaw && handRaw.length === this.lastHandRaw.length + 1) {
-      // Heuristic: draw() pushes at the end in server implementation.
+    //
+    // Note: after 杠，手牌会先减少（移除杠牌）再补摸 1 张，整体长度不一定是 +1。
+    // 所以只要处于“可出牌”状态且手牌长度发生变化，就把最后一张当作“新摸牌”。
+    if (canDiscard && this.lastHandRaw && handRaw.length !== this.lastHandRaw.length && handRaw.length > 0) {
       this.pendingDrawIndex = handRaw.length - 1;
     }
 
-    // First render after round start (e.g. 东家起手 14 张 / debug ?tile=5 => 6 张)：
+    // First render after round start (e.g. 东家起手 14 张 / debug ?tile=4 => 5 张+1)：
     // 这张“多出来的牌”也当作新摸牌处理。
     if (!this.lastHandRaw && canDiscard && handRaw.length > 0) {
       this.pendingDrawIndex = handRaw.length - 1;

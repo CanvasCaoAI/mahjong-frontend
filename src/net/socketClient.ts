@@ -44,6 +44,10 @@ export class MahjongClient {
     this.socket?.emit('hu');
   }
 
+  gang() {
+    this.socket?.emit('gang');
+  }
+
   peng() {
     this.socket?.emit('peng');
   }
