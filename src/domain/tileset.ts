@@ -6,6 +6,7 @@ export const ALL_TILES: Tile[] = (() => {
     for (let n=1; n<=9; n++) out.push(`${s}${n}` as Tile);
   }
   for (let n=1; n<=7; n++) out.push(`z${n}` as Tile);
+  for (let n=1; n<=8; n++) out.push(`f${n}` as Tile);
   return out;
 })();
 

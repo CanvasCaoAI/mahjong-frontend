@@ -129,60 +129,82 @@ export class HandView {
     // 碰/杠牌 gap：按牌宽来排，避免跟手牌 gap 绑定导致看起来“没变”
     const meldGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
 
+    const flowerTiles: Tile[] = [];
     const flatMeldTiles: Tile[] = [];
-    for (const m of melds) flatMeldTiles.push(...m.tiles);
+    for (const m of melds) {
+      if (m.type === 'flower') flowerTiles.push(...m.tiles);
+      else flatMeldTiles.push(...m.tiles);
+    }
+
+    const flowerGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
+    const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * flowerGap + meldTileW : 0;
+
     const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + meldTileW : 0;
 
     const totalW = hand.length > 0 ? (hand.length - 1) * gap + tileW : 0;
     const margin = Math.round(tableW * 0.03);
 
-    // 碰/杠牌与手牌之间的断开距离（也随屏幕缩放）
-    const groupGap = flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
+    // 花牌与碰/杠之间、碰/杠与手牌之间的断开距离（随屏幕缩放）
+    const gapFlowerToMeld = flowerTiles.length && flatMeldTiles.length ? Math.round(Math.max(10, gap * 0.25)) : 0;
+    const gapMeldToHand = flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
 
-    // 让（meld + gap + hand）整体尽量居中
-    const wholeW = meldW + groupGap + totalW;
+    // 让（flower + gap + meld + gap + hand）整体尽量居中
+    const wholeW = flowerW + gapFlowerToMeld + meldW + gapMeldToHand + totalW;
     const centeredWholeStart = (tableW - wholeW) / 2;
     const startWholeX = Math.max(margin, centeredWholeStart);
 
-    // meld 起点 / hand 起点
-    const meldStartX = startWholeX;
-    const startX = meldStartX + meldW + groupGap;
+    const flowerStartX = startWholeX;
+    const meldStartX = flowerStartX + flowerW + gapFlowerToMeld;
+    const startX = meldStartX + meldW + gapMeldToHand;
+
+    // Flowers: render at the far left (upright)
+    for (let i = 0; i < flowerTiles.length; i++) {
+      const x = flowerStartX + i * flowerGap + meldTileW / 2;
+      const key = tileKey(flowerTiles[i] as any);
+      const img = this.scene.add.image(x, y, key);
+      img.setDisplaySize(meldTileW, meldTileH);
+      img.setAlpha(0.98);
+      img.setDepth(60);
+      this.meldSprites.push(img);
+    }
 
     // render meld tiles (flat)
     // 需求：看上去更“扁”，并且底部有一个白色的矩形方块
     // 只用 displaySize 控制最终大小（不要再 setScale 二次缩放）
-    // 切掉碰牌图片顶部（像“摊开”被桌面挡住一点）
-    const cropTopPx = 12;
+    // 碰牌/花牌：顶部不要切
+    const cropTopPx = 0;
 
-    // 底部白色矩形：宽度同麻将，
+    // 底部白色矩形：宽度同麻将
+    const baseH = Math.max(10, Math.round(meldTileH * 0.28));
+
     for (let i = 0; i < flatMeldTiles.length; i++) {
       const x = meldStartX + i * meldGap + meldTileW / 2;
       const key = tileKey(flatMeldTiles[i] as any);
 
       const img = this.scene.add.image(x, y, key);
-      // 不转 90 度
       img.setDisplaySize(meldTileW, meldTileH);
 
-      // 切掉顶部：crop 使用的是原始纹理像素尺寸（frame），不是 displaySize
+      // crop uses frame pixels
       const fw = img.frame.width;
       const fh = img.frame.height;
       const cropTop = Math.max(0, Math.min(cropTopPx, fh - 1));
       img.setCrop(0, cropTop, fw, fh - cropTop);
+
       img.setAlpha(0.98);
       img.setDepth(60);
 
-      // white base block (under the tile) —— 放在牌下面，不要盖住牌面
-      // 直接用最终显示高度（meldTileH），不要再乘缩放系数
+      // white base block (under the tile)
       const tileRenderH = meldTileH;
-      // 视觉上麻将牌外框宽度接近 TileButton 的 60px（而不是牌面 56px）
       const base = this.scene.add.rectangle(
         x,
-        y + tileRenderH * 0.5,
+        y + tileRenderH * 0.5 + baseH * 0.5 - 1,
         meldTileW,
-        meldTileH * 0.2,
+        baseH,
         0xFFFFFF,
         0.95
       );
+      // thin black outline
+      base.setStrokeStyle(1, 0x0B1020, 0.85);
       base.setDepth(59);
 
       this.meldSprites.push(base, img);
