@@ -70,8 +70,15 @@ export class HandView {
       this.pendingDrawIndex = handRaw.length - 1;
     }
 
-    // If not in a discard-able state with 14 tiles, don't treat any tile as "fresh draw".
-    const isFreshDrawState = canDiscard && handRaw.length >= 14;
+    // First render after round start (e.g. 东家起手 14 张 / debug ?tile=5 => 6 张)：
+    // 这张“多出来的牌”也当作新摸牌处理。
+    if (!this.lastHandRaw && canDiscard && handRaw.length > 0) {
+      this.pendingDrawIndex = handRaw.length - 1;
+    }
+
+    // If not in a discard-able state, don't treat any tile as "fresh draw".
+    // Note: when using debug ?tile=5 etc, hand size may not be 14, so we only gate on canDiscard.
+    const isFreshDrawState = canDiscard;
     if (!isFreshDrawState) this.pendingDrawIndex = null;
 
     const drawn = (this.pendingDrawIndex !== null && this.pendingDrawIndex >= 0 && this.pendingDrawIndex < handRaw.length)
@@ -177,9 +184,12 @@ export class HandView {
     }
 
     for (let i = 0; i < hand.length; i++) {
-      // 最右侧“新摸牌”稍微与其他牌拉开一点，视觉上更明显
-      const extraGap = (drawn && i === hand.length - 1) ? 18 : 0;
-      const x = startX + i * gap + extraGap;
+      const isDrawn = !!(drawn && i === hand.length - 1);
+
+      // 新摸牌：放最右侧，并与手牌组拉开一些距离（仅横向，不上移）
+      const extraX = isDrawn ? 36 : 0;
+
+      const x = startX + i * gap + extraX;
       const { tile, idx: serverIndex } = hand[i];
 
       const btn = new TileButton(this.scene, x + 30, y, `tile_${tile}` as any, () => {
