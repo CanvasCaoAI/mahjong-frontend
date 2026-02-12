@@ -19,32 +19,38 @@ export class TurnCompass {
     const l = computeLayout(scene);
     this.container = scene.add.container(l.compassX, l.compassY);
 
-    const ring = scene.add.circle(0, 0, 86, 0x000000, 0.08);
-    ring.setStrokeStyle(2, 0x0b3d2e, 0.35);
+    // Square compass (smaller, proportional)
+    const size = Math.round(scene.scale.width * 0.13);
+    const half = size / 2;
 
-    const center = scene.add.rectangle(0, 0, 44, 44, 0x000000, 0.12);
+    const frame = scene.add.rectangle(0, 0, size, size, 0x000000, 0.10);
+    frame.setStrokeStyle(2, 0x0b3d2e, 0.35);
+
+    const center = scene.add.rectangle(0, 0, size * 0.36, size * 0.36, 0x000000, 0.12);
     center.setStrokeStyle(2, 0x86efac, 0.25);
 
+    const fontPx = Math.round(size * 0.28);
     const mk = (px: number, py: number) => {
       const txt = scene.add.text(px, py, '-', {
-        fontSize: '30px',
+        fontSize: `${fontPx}px`,
         color: '#9CA3AF',
         fontStyle: '900'
       }).setOrigin(0.5);
       return txt;
     };
 
+    const off = half * 0.62;
     this.labels = {
-      bottom: mk(0, 54),
-      right: mk(54, 0),
-      top: mk(0, -54),
-      left: mk(-54, 0),
+      bottom: mk(0, off),
+      right: mk(off, 0),
+      top: mk(0, -off),
+      left: mk(-off, 0),
     };
 
     // Wall count moved to WallCountView (top-left)
 
     this.container.add([
-      ring,
+      frame,
       center,
       this.labels.bottom,
       this.labels.right,
@@ -53,10 +59,7 @@ export class TurnCompass {
       // wall count moved
     ]);
 
-    // 自适应缩放：根据屏幕尺寸动态调整罗盘大小
-    // Pure proportional scaling (no clamps)
-    const s = scene.scale.width / 1100;
-    this.container.setScale(s);
+    // No extra scaling: we already size it proportional to screen width.
     this.container.setDepth(5);
   }
 

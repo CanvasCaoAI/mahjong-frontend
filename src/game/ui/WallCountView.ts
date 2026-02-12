@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import type { PublicState } from '../../domain/types';
-import { computeLayout } from './layout';
 
 // Top-left "remaining tiles" indicator.
 export class WallCountView {
@@ -9,8 +8,6 @@ export class WallCountView {
   private countText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
-    const l = computeLayout(scene);
-
     // Pure proportional scaling (no clamps)
     const fontPx = Math.round(scene.scale.width * 0.022);
 
@@ -30,13 +27,14 @@ export class WallCountView {
       strokeThickness: 4,
     }).setOrigin(0, 0);
 
-    const padX = 10;
-    const padY = 6;
+    const padX = Math.round(scene.scale.width * 0.008);
+    const padY = Math.round(scene.scale.width * 0.005);
     const bg = scene.add.rectangle(0, 0, 10, 10, 0x0b1020, 0.55)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0xffffff, 0.12);
 
-    this.container = scene.add.container(l.margin, l.margin, [bg, this.labelText, this.countText]);
+    // Tight to top-left corner
+    this.container = scene.add.container(0, 0, [bg, this.labelText, this.countText]);
     this.container.setDepth(1000);
 
     // Layout once
@@ -60,7 +58,9 @@ export class WallCountView {
     if (this.countText.text !== v) {
       this.countText.setText(v);
       const bg = this.container.list[0] as Phaser.GameObjects.Rectangle;
-      this.reflow(bg, 10, 6);
+      const padX = Math.round(this.container.scene.scale.width * 0.008);
+      const padY = Math.round(this.container.scene.scale.width * 0.005);
+      this.reflow(bg, padX, padY);
     }
   }
 

@@ -173,7 +173,14 @@ export class GameScene extends Phaser.Scene {
     const l = computeLayout(this);
 
     // Hand + other views
-    this.handView.setLayout({ y: l.handY, gap: l.handGap, width: l.w });
+    // Safe band for bottom hand to avoid overlapping side opponents.
+    // (Side opponent tiles are sized proportional to screen width in OpponentHandsView)
+    const oppW = Math.round(this.scale.width * 0.025);
+    const pad = Math.round(this.scale.width * 0.01);
+    const xLeft = l.oppSideXInset + oppW / 2 + pad;
+    const xRight = l.w - l.oppSideXInset - oppW / 2 - pad;
+
+    this.handView.setLayout({ y: l.handY, gap: l.handGap, width: l.w, xLeft, xRight });
     const melds = (st && st.yourSeat !== null && st.meldsBySeat) ? (st.meldsBySeat[st.yourSeat] ?? []) : (st?.yourMelds ?? []);
     this.handView.update(st?.yourHand ?? [], canDiscard, melds);
 

@@ -20,8 +20,8 @@ export class DiscardsView {
     const y = tileY - tileH / 2 - 10;
     const x = tileX;
 
-    const triW = 16;
-    const triH = 12;
+    const triW = Math.round(tileH * 0.45);
+    const triH = Math.round(tileH * 0.34);
 
     const t = this.scene.add.triangle(
       x,
@@ -85,12 +85,9 @@ export class DiscardsView {
 
     const l = computeLayout(this.scene);
 
-    // Tile visual size (in-game)
-    // 弃牌区牌面稍微放大 10%，并且随屏幕尺寸自适应
-    const baseW = Math.max(24, Math.min(36, Math.round(Math.min(l.w, l.h) * 0.045)));
-    const baseH = Math.round(baseW * 1.28);
-    const tileW = Math.round(baseW * 1.1);
-    const tileH = Math.round(baseH * 1.1);
+    // Tile visual size (in-game): purely proportional to screen width
+    const tileW = Math.round(l.w * 0.03);
+    const tileH = Math.round(tileW * 1.28);
 
     // No-gap spacing (tiles touch each other)
     const dx = tileW;

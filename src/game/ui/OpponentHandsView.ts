@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Meld, PublicState, Seat, Tile } from '../../domain/types';
 import { backKey, tileKey } from '../../domain/tileset';
-import { computeLayout } from './layout';
+// layout removed; this view positions itself relative to screen edges
 
 export class OpponentHandsView {
   private objects: Phaser.GameObjects.GameObject[] = [];
@@ -96,29 +96,32 @@ export class OpponentHandsView {
       const r = rel(seat);
       const show = clamp(count, max);
 
-      const l = computeLayout(this.scene);
+      const w = this.scene.scale.width;
+      const h = this.scene.scale.height;
+      const edgePad = w * 0.015;
 
       if (r === 2) {
-        const y = l.oppTopY;
+        // Top opponent: keep near top edge, centered horizontally.
+        const y = Math.round(h * 0.12);
 
         if (isWinner(seat)) {
           // 胡牌者：展示正面（使用后端结算的 handsBySeat），并在附近显示和牌内容
           const tiles = winnerTiles(seat) ?? [];
           const gap = Math.round(this.scene.scale.width * 0.025);
           const totalW = tiles.length > 0 ? (tiles.length - 1) * gap : 0;
-          const startX = Math.round(l.w / 2 - totalW / 2);
+          const startX = Math.round(w / 2 - totalW / 2);
           for (let i = 0; i < tiles.length; i++) makeFace(startX + i * gap, y, 0, tiles[i]);
           // win text rendered around compass
         } else {
           // 上侧（对面横排）：组合（背牌+碰牌）需要左右居中；碰牌在背牌右边
-          const gap = l.oppTopGap;
-          const meldGap = Math.round(this.scene.scale.width * 0.022); // 上侧碰牌 gap
-          const between = (show && meldTiles.length) ? Math.round(this.scene.scale.width * 0.025) : 0;
+          const gap = Math.round(w * 0.025);
+          const meldGap = Math.round(w * 0.022); // 上侧碰牌 gap
+          const between = (show && meldTiles.length) ? Math.round(w * 0.025) : 0;
 
           const backsW = show > 0 ? (show - 1) * gap : 0;
           const meldW = meldTiles.length > 0 ? (meldTiles.length - 1) * meldGap : 0;
           const totalW = backsW + between + meldW;
-          const startX = Math.round(l.w / 2 - totalW / 2);
+          const startX = Math.round(w / 2 - totalW / 2);
 
           for (let i = 0; i < show; i++) makeBack(startX + i * gap, y, 0);
 
@@ -126,23 +129,26 @@ export class OpponentHandsView {
           for (let i = 0; i < meldTiles.length; i++) makeMeldTile(meldStartX + i * meldGap, y, 0, meldTiles[i]);
         }
       } else if (r === 1) {
-        const x0 = l.oppSideXInset;
+        // Left opponent: near left edge, vertically centered.
+        const x0 = Math.round(edgePad + oppW / 2);
 
         if (isWinner(seat)) {
           const tiles = winnerTiles(seat) ?? [];
-          const gapY = 28;
+          const gapY = Math.round(oppH * 0.72);
           const totalH = tiles.length > 0 ? (tiles.length - 1) * gapY : 0;
-          const midY = l.oppSideYTop + (totalH / 2);
+          const midY = Math.round(h / 2);
           const startY = Math.round(midY - totalH / 2);
           for (let i = 0; i < tiles.length; i++) makeFace(x0, startY + i * gapY, 90, tiles[i]);
           // win text rendered around compass
         } else {
           // 左侧：组合（碰牌在上 + 背牌在下）需要上下居中
-          const gapY = l.oppSideGap;
-          const meldGap = 24;
-          const between = (show && meldTiles.length) ? 26 : 0;
+          // Gap should track tile size.
+          // Use slightly larger gaps to avoid cramped look on tall columns.
+          const gapY = Math.round(oppH * 0.72);
+          const meldGap = Math.round(oppH * 0.62);
+          const between = (show && meldTiles.length) ? Math.round(oppH * 0.85) : 0;
 
-          const midY = l.oppSideYTop + (show > 0 ? ((show - 1) * gapY) / 2 : 0);
+          const midY = Math.round(h / 2);
 
           const backsH = show > 0 ? (show - 1) * gapY : 0;
           const meldH = meldTiles.length > 0 ? (meldTiles.length - 1) * meldGap : 0;
@@ -157,23 +163,26 @@ export class OpponentHandsView {
           for (let i = 0; i < show; i++) makeBack(x0, backsStartY + i * gapY, 90);
         }
       } else if (r === 3) {
-        const x0 = l.w - l.oppSideXInset;
+        // Right opponent: near right edge, vertically centered.
+        const x0 = Math.round(w - edgePad - oppW / 2);
 
         if (isWinner(seat)) {
           const tiles = winnerTiles(seat) ?? [];
-          const gapY = 28;
+          const gapY = Math.round(oppH * 0.72);
           const totalH = tiles.length > 0 ? (tiles.length - 1) * gapY : 0;
-          const midY = l.oppSideYTop + (totalH / 2);
+          const midY = Math.round(h / 2);
           const startY = Math.round(midY - totalH / 2);
           for (let i = 0; i < tiles.length; i++) makeFace(x0, startY + i * gapY, 90, tiles[i]);
           // win text rendered around compass
         } else {
           // 右侧：保持同样居中策略（背牌在上 + 碰牌在下）
-          const gapY = l.oppSideGap;
-          const meldGap = 24;
-          const between = (show && meldTiles.length) ? 26 : 0;
+          // Gap should track tile size.
+          // Use slightly larger gaps to avoid cramped look on tall columns.
+          const gapY = Math.round(oppH * 0.72);
+          const meldGap = Math.round(oppH * 0.62);
+          const between = (show && meldTiles.length) ? Math.round(oppH * 0.85) : 0;
 
-          const midY = l.oppSideYTop + (show > 0 ? ((show - 1) * gapY) / 2 : 0);
+          const midY = Math.round(h / 2);
 
           const backsH = show > 0 ? (show - 1) * gapY : 0;
           const meldH = meldTiles.length > 0 ? (meldTiles.length - 1) * meldGap : 0;
