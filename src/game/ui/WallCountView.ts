@@ -11,8 +11,8 @@ export class WallCountView {
   constructor(scene: Phaser.Scene) {
     const l = computeLayout(scene);
 
-    // Slightly larger and more readable than compass small text.
-    const fontPx = Math.round(Math.max(16, Math.min(22, scene.scale.width * 0.022)));
+    // Pure proportional scaling (no clamps)
+    const fontPx = Math.round(scene.scale.width * 0.022);
 
     this.labelText = scene.add.text(0, 0, '剩余张数：', {
       fontSize: `${fontPx}px`,

@@ -25,11 +25,8 @@ export class OpponentHandsView {
     const rel = (seat: Seat) => ((you as number) - (seat as number) + 4) % 4; // 0=bottom,1=left,2=top,3=right
     const clamp = (n: number, m: number) => Math.min(n, m);
 
-    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
-    const clampN = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-
-    // Opponent tile sizing (backs + melds): scale with screen
-    const oppW = Math.round(clampN(minDim * 0.04, 20, 28));
+    // Opponent tile sizing (backs + melds): purely proportional to screen width (no clamps)
+    const oppW = Math.round(this.scene.scale.width * 0.025);
     const oppH = Math.round(oppW * 1.30);
 
     const makeBack = (x: number, y: number, angle: number) => {
@@ -80,7 +77,7 @@ export class OpponentHandsView {
     const makeFace = (x: number, y: number, angle: number, tile: Tile) => {
       const key = tileKey(tile as any);
       const img = this.scene.add.image(x, y, key);
-      img.setDisplaySize(26, 34);
+      img.setDisplaySize(oppW, oppH);
       img.setAngle(angle);
       img.setAlpha(1);
       img.setDepth(6);
@@ -107,7 +104,7 @@ export class OpponentHandsView {
         if (isWinner(seat)) {
           // 胡牌者：展示正面（使用后端结算的 handsBySeat），并在附近显示和牌内容
           const tiles = winnerTiles(seat) ?? [];
-          const gap = 28;
+          const gap = Math.round(this.scene.scale.width * 0.025);
           const totalW = tiles.length > 0 ? (tiles.length - 1) * gap : 0;
           const startX = Math.round(l.w / 2 - totalW / 2);
           for (let i = 0; i < tiles.length; i++) makeFace(startX + i * gap, y, 0, tiles[i]);
@@ -115,8 +112,8 @@ export class OpponentHandsView {
         } else {
           // 上侧（对面横排）：组合（背牌+碰牌）需要左右居中；碰牌在背牌右边
           const gap = l.oppTopGap;
-          const meldGap = 24; // 上侧碰牌 gap (tighter)
-          const between = (show && meldTiles.length) ? 28 : 0;
+          const meldGap = Math.round(this.scene.scale.width * 0.022); // 上侧碰牌 gap
+          const between = (show && meldTiles.length) ? Math.round(this.scene.scale.width * 0.025) : 0;
 
           const backsW = show > 0 ? (show - 1) * gap : 0;
           const meldW = meldTiles.length > 0 ? (meldTiles.length - 1) * meldGap : 0;

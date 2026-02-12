@@ -13,14 +13,14 @@ export class ScoreboardView {
   constructor(scene: Phaser.Scene) {
     const w = scene.scale.width;
     const h = scene.scale.height;
-    const margin = Math.round(Math.max(10, w * 0.02));
+    const margin = Math.round(w * 0.02);
 
     // Button (top-right)
-    const bw = Math.round(Math.max(72, w * 0.10));
-    const bh = 34;
+    const bw = Math.round(w * 0.10);
+    const bh = Math.round(h * 0.05);
 
     const btnBg = scene.add.rectangle(0, 0, bw, bh, 0x0b1020, 0.55).setStrokeStyle(1, 0xffffff, 0.18);
-    const btnText = scene.add.text(0, 0, '分数', { fontSize: '14px', color: '#E2E8F0' }).setOrigin(0.5, 0.5);
+    const btnText = scene.add.text(0, 0, '分数', { fontSize: `${Math.round(w * 0.016)}px`, color: '#E2E8F0' }).setOrigin(0.5, 0.5);
     this.btn = scene.add.container(w - margin - bw / 2, margin + bh / 2, [btnBg, btnText]);
     this.btn.setSize(bw, bh);
     this.btn.setDepth(5000);
@@ -39,24 +39,24 @@ export class ScoreboardView {
 
     const bg = scene.add.rectangle(0, 0, pw, ph, 0x0b1020, 0.92).setStrokeStyle(1, 0xffffff, 0.14);
 
-    const title = scene.add.text(-pw / 2 + 16, -ph / 2 + 12, '记分板', { fontSize: '18px', color: '#E2E8F0' });
+    const title = scene.add.text(-pw / 2 + 16, -ph / 2 + 12, '记分板', { fontSize: `${Math.round(w * 0.020)}px`, color: '#E2E8F0' });
 
-    const closeHint = scene.add.text(pw / 2 - 16, -ph / 2 + 14, '点击空白处关闭', { fontSize: '12px', color: '#AAB3C7' }).setOrigin(1, 0);
+    const closeHint = scene.add.text(pw / 2 - 16, -ph / 2 + 14, '点击空白处关闭', { fontSize: `${Math.round(w * 0.012)}px`, color: '#AAB3C7' }).setOrigin(1, 0);
 
     this.scoreText = scene.add.text(-pw / 2 + 16, -ph / 2 + 48, '', {
-      fontSize: '16px',
+      fontSize: `${Math.round(w * 0.016)}px`,
       color: '#E2E8F0',
-      lineSpacing: 6,
+      lineSpacing: Math.round(w * 0.006),
     });
 
-    const divider = scene.add.rectangle(0, -ph / 2 + 140, pw - 28, 1, 0xffffff, 0.10);
+    const divider = scene.add.rectangle(0, -ph / 2 + Math.round(h * 0.20), pw - 28, 1, 0xffffff, 0.10);
 
-    const roundsTitle = scene.add.text(-pw / 2 + 16, -ph / 2 + 156, '每轮记录', { fontSize: '14px', color: '#AAB3C7' });
+    const roundsTitle = scene.add.text(-pw / 2 + 16, -ph / 2 + Math.round(h * 0.225), '每轮记录', { fontSize: `${Math.round(w * 0.014)}px`, color: '#AAB3C7' });
 
-    this.roundsText = scene.add.text(-pw / 2 + 16, -ph / 2 + 182, '', {
-      fontSize: '13px',
+    this.roundsText = scene.add.text(-pw / 2 + 16, -ph / 2 + Math.round(h * 0.265), '', {
+      fontSize: `${Math.round(w * 0.013)}px`,
       color: '#E2E8F0',
-      lineSpacing: 6,
+      lineSpacing: Math.round(w * 0.006),
       wordWrap: { width: pw - 32 },
     });
 
@@ -112,7 +112,7 @@ export class ScoreboardView {
       return;
     }
 
-    const maxShow = 10;
+    const maxShow = 12;
     const out: string[] = [];
     for (const r of recs.slice(0, maxShow)) {
       const winners = r.winners.map(this.seatName).join(',');

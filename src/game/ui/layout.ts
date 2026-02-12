@@ -49,14 +49,11 @@ export type TableLayout = {
 export function computeLayout(scene: Phaser.Scene): TableLayout {
   const w = scene.scale.width;
   const h = scene.scale.height;
-  const minDim = Math.min(w, h);
+  // Global UI scale: purely proportional to screen width (no min/max clamps).
+  // Baseline: the original layout was tuned around ~1100px width.
+  const s = w / 1100;
 
-  const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-
-  // Global UI scale: keep the old layout proportions, just scale them down on small screens.
-  const s = clamp(minDim / 900, 0.55, 1.0);
-
-  const margin = Math.round(clamp(w * 0.03, 10, 28));
+  const margin = Math.round(w * 0.03);
 
   // Keep the original “feel” but scaled
   const handY = Math.round(h - 80 * s);
@@ -77,23 +74,23 @@ export function computeLayout(scene: Phaser.Scene): TableLayout {
     compassY: Math.round(h / 2 - 20 * s),
 
     handY,
-    handGap: Math.round(clamp(60 * s, 30, 58)),
+    handGap: Math.round(60 * s),
 
     // Action buttons: anchor near right side (scaled)
     winY: Math.round(handY - 100 * s),
     winX: Math.round(w - margin - 220 * s),
-    winGap: Math.round(clamp(110 * s, 60, 120)),
+    winGap: Math.round(110 * s),
 
     // Opponent hands
     oppTopY: Math.round(margin + 90 * s),
-    oppTopGap: Math.round(clamp(28 * s, 18, 28)),
-    oppSideGap: Math.round(clamp(20 * s, 14, 20)),
+    oppTopGap: Math.round(28 * s),
+    oppSideGap: Math.round(20 * s),
     oppSideXInset: Math.round(margin + 60 * s),
     oppSideYTop: Math.round(h * 0.30),
 
     // Discards (scaled gaps, stable anchor bands)
-    discardTileGapX: Math.round(clamp(34 * s, 22, 34)),
-    discardTileGapY: Math.round(clamp(44 * s, 28, 44)),
+    discardTileGapX: Math.round(34 * s),
+    discardTileGapY: Math.round(44 * s),
     discardBottomY: Math.round(h * 0.67),
     discardTopY: Math.round(h * 0.34),
     discardCenterBandY: Math.round(h * 0.50),

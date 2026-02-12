@@ -121,10 +121,8 @@ export class ActionPrompt {
   update(st: PublicState | null) {
     const l = computeLayout(this.scene);
 
-    // Mobile-friendly scaling for action buttons
-    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const s = clamp(minDim / 900, 0.62, 1.0);
+    // Pure proportional scaling (no min/max clamps)
+    const s = this.scene.scale.width / 1100;
     this.huBtn.setScale(s);
     this.gangBtn.setScale(s);
     this.pengBtn.setScale(s);

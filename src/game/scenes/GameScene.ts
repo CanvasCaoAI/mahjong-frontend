@@ -215,7 +215,7 @@ export class GameScene extends Phaser.Scene {
 
       for (const w of winners) {
         if (!this.winTexts[w]) {
-          const fontPx = Math.round(Math.max(44, minDim * 0.055));
+          const fontPx = Math.round(minDim * 0.055);
           this.winTexts[w] = this.add.text(0, 0, '', {
             fontFamily: '"KaiTi","STKaiti","Kaiti SC",serif',
             fontSize: `${fontPx}px`,

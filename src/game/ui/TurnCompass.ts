@@ -54,9 +54,8 @@ export class TurnCompass {
     ]);
 
     // 自适应缩放：根据屏幕尺寸动态调整罗盘大小
-    const minDim = Math.min(scene.scale.width, scene.scale.height);
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const s = clamp(minDim / 900, 0.62, 0.9);
+    // Pure proportional scaling (no clamps)
+    const s = scene.scale.width / 1100;
     this.container.setScale(s);
     this.container.setDepth(5);
   }
