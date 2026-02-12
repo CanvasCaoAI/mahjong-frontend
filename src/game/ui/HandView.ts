@@ -12,6 +12,11 @@ export class HandView {
   private lastHandRaw: Tile[] | null = null;
   private pendingDrawIndex: number | null = null;
 
+  // Lock sizing for the whole round (until full page refresh).
+  // Do NOT recompute on resize or on hand length changes (13/14).
+  private lockedTileW: number | null = null;
+  private lockedGap: number | null = null;
+
   private scene: Phaser.Scene;
   private opts: {
     y: number;
@@ -122,7 +127,9 @@ export class HandView {
     this.lastHandRaw = handRaw.slice();
 
     const y = this.opts.y;
-    let gap = this.opts.gap;
+    // Hand gap should track tile width (no independent scaling).
+    // i.e. spacing between tiles = tileW.
+    let gap = 0;
     const tableW = this.opts.width;
 
     // Split melds into: flowers (left) and flat melds (peng/chi/gang)
@@ -132,6 +139,12 @@ export class HandView {
     for (const m of melds) {
       if (m.type === 'flower') flowerTiles.push(...m.tiles);
       else flatMeldTiles.push(...m.tiles);
+    }
+
+    // If table is empty (between rounds), reset locked sizing.
+    if (handRaw.length === 0 && flowerTiles.length === 0 && flatMeldTiles.length === 0) {
+      this.lockedTileW = null;
+      this.lockedGap = null;
     }
     // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
     const flowerCount = new Map<Tile, number>();
@@ -144,11 +157,11 @@ export class HandView {
       flowerCount.set(t as Tile, 1);
     }
 
-    // Hand tile sizing: try to make (flowers + melds + hand) occupy ~80% screen width.
+    // Hand tile sizing: lock per round (until manual refresh).
+    // Goal: the whole group occupies ~80% screen width.
     const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-    const calc = (tileW: number, gap: number) => {
+    const calc = (tileW: number, gap: number, handLenForSizing: number) => {
       const tileH = Math.round(tileW * 1.30);
       const imgW = Math.round(tileW - 4);
       const imgH = Math.round(tileH - 6);
@@ -159,7 +172,7 @@ export class HandView {
       const flowerGap = Math.round(tileW + Math.max(2, tileW * 0.04));
       const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * flowerGap + tileW : 0;
       const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + tileW : 0;
-      const totalW = hand.length > 0 ? (hand.length - 1) * gap + tileW : 0;
+      const totalW = handLenForSizing > 0 ? (handLenForSizing - 1) * gap + tileW : 0;
 
       const gapFlowerToMeld = flowerTiles.length && flatMeldTiles.length ? Math.round(Math.max(10, gap * 0.25)) : 0;
       const gapFlowerToHand = flowerTiles.length && !flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
@@ -184,18 +197,30 @@ export class HandView {
       };
     };
 
-    // Start from the old heuristic, then scale to target width.
-    let tileW = Math.round(clamp(minDim * 0.07, 42, 80));
-    let dims = calc(tileW, gap);
+    // Hand gap should track tile width (no independent scaling).
+    let tileW: number;
+    if (this.lockedTileW && this.lockedGap) {
+      tileW = this.lockedTileW;
+      gap = this.lockedGap;
+    } else {
+      // First compute: size against worst-case 14 tiles to avoid 13/14 oscillation.
+      const handLenForSizing = Math.max(hand.length, 14);
+      tileW = Math.round(minDim * 0.07);
+      gap = tileW;
+      let dims0 = calc(tileW, gap, handLenForSizing);
 
-    // Target: occupy more of the screen width (your request: wider).
-    const targetW = tableW * 0.9;
-    const scale = dims.wholeW > 0 ? clamp(targetW / dims.wholeW, 0.85, 1.6) : 1;
+      const targetW = tableW * 0.8;
+      const scale = dims0.wholeW > 0 ? (targetW / dims0.wholeW) : 1;
 
-    // Apply scale (and keep within reasonable bounds)
-    tileW = Math.round(clamp(tileW * scale, 42, 110));
-    gap = Math.round(clamp(gap * scale, 24, 110));
-    dims = calc(tileW, gap);
+      tileW = Math.round(tileW * scale);
+      gap = tileW;
+
+      this.lockedTileW = tileW;
+      this.lockedGap = gap;
+    }
+
+    // Use actual current hand length for drawing (but sizing is locked).
+    const dims = calc(tileW, gap, hand.length);
 
     const margin = Math.round(tableW * 0.03);
 
