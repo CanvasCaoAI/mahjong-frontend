@@ -13,8 +13,7 @@ export class TurnCompass {
     top: Phaser.GameObjects.Text;
     left: Phaser.GameObjects.Text;
   };
-  private wallLabelText: Phaser.GameObjects.Text;
-  private wallCountText: Phaser.GameObjects.Text;
+  // moved to WallCountView
 
   constructor(scene: Phaser.Scene) {
     const l = computeLayout(scene);
@@ -42,23 +41,7 @@ export class TurnCompass {
       left: mk(-54, 0),
     };
 
-    // “剩余张数：数字”这一行：往上移动一点点，但不要和 compass 重叠
-    // ring 半径 86；这里放在 110（较原 118 上移 8px），与 ring 保持间距
-    const wallY = 110;
-
-    // “剩余张数”这几个字：黄色，并缩小 40%（28px -> ~17px）
-    this.wallLabelText = scene.add.text(0, wallY, '剩余张数：', {
-      fontSize: '17px',
-      color: '#FACC15',
-      fontStyle: '900'
-    }).setOrigin(0, 0.5);
-
-    // 数字部分：同样黄色、同样大小
-    this.wallCountText = scene.add.text(0, wallY, '-', {
-      fontSize: '17px',
-      color: '#FACC15',
-      fontStyle: '900'
-    }).setOrigin(0, 0.5);
+    // Wall count moved to WallCountView (top-left)
 
     this.container.add([
       ring,
@@ -67,8 +50,7 @@ export class TurnCompass {
       this.labels.right,
       this.labels.top,
       this.labels.left,
-      this.wallLabelText,
-      this.wallCountText,
+      // wall count moved
     ]);
 
     // 自适应缩放：根据屏幕尺寸动态调整罗盘大小
@@ -117,16 +99,7 @@ export class TurnCompass {
       }
     }
 
-    this.wallCountText.setText(String(st?.wallCount ?? '-'));
-
-    // 动态居中对齐：让「剩余张数：」+「数字」整体仍然以 x=0 为中心
-    const labelW = this.wallLabelText.width;
-    const countW = this.wallCountText.width;
-    const totalW = labelW + countW;
-    const leftX = -totalW / 2;
-
-    this.wallLabelText.setX(leftX);
-    this.wallCountText.setX(leftX + labelW);
+    // Wall count moved to WallCountView
   }
 
   destroy() {

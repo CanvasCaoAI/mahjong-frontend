@@ -6,6 +6,7 @@ import { client, onState } from '../../net/clientSingleton';
 import { ActionPrompt } from '../ui/ActionPrompt';
 import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
+import { WallCountView } from '../ui/WallCountView';
 import { OpponentHandsView } from '../ui/OpponentHandsView';
 import { ScoreboardView } from '../ui/ScoreboardView';
 import { HandView } from '../ui/HandView';
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private actionPrompt!: ActionPrompt;
   private discardsView!: DiscardsView;
   private turnCompass!: TurnCompass;
+  private wallCountView!: WallCountView;
   private opponentHands!: OpponentHandsView;
   private handView!: HandView;
   private scoreboardView!: ScoreboardView;
@@ -79,6 +81,7 @@ export class GameScene extends Phaser.Scene {
 
     this.discardsView = new DiscardsView(this);
     this.turnCompass = new TurnCompass(this);
+    this.wallCountView = new WallCountView(this);
     this.opponentHands = new OpponentHandsView(this);
     this.scoreboardView = new ScoreboardView(this);
 
@@ -105,6 +108,7 @@ export class GameScene extends Phaser.Scene {
       this.actionPrompt?.destroy();
       this.discardsView?.destroy();
       this.turnCompass?.destroy();
+      this.wallCountView?.destroy();
       this.opponentHands?.destroy();
       this.handView?.destroy();
       this.scoreboardView?.destroy();
@@ -176,6 +180,7 @@ export class GameScene extends Phaser.Scene {
     this.opponentHands.update(st);
     this.discardsView.update(st);
     this.turnCompass.update(st, this);
+    this.wallCountView.update(st);
 
     // 和牌文字：大小一致，摆在中间罗盘的上下左右（只给胡家显示）
     // 注意：和牌内容（reason）已抽到 st.winInfo，不再写在 st.result 里。
