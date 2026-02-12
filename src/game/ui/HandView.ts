@@ -122,21 +122,8 @@ export class HandView {
     this.lastHandRaw = handRaw.slice();
 
     const y = this.opts.y;
-    const gap = this.opts.gap;
+    let gap = this.opts.gap;
     const tableW = this.opts.width;
-
-    // Hand tile sizing: scale with screen width/height; keep readable on mobile
-    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
-    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-    const tileW = Math.round(clamp(minDim * 0.07, 42, 60));
-    const tileH = Math.round(tileW * 1.30);
-    const imgW = Math.round(tileW - 4);
-    const imgH = Math.round(tileH - 6);
-
-    // Meld sizing
-    const meldTileW = tileW;
-    const meldTileH = tileH * 0.8;
-    const meldGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
 
     // Split melds into: flowers (left) and flat melds (peng/chi/gang)
     // Plus: treat any 'f' tiles still present in handRaw as flowers too (UI-safety for first draw).
@@ -152,58 +139,101 @@ export class HandView {
     for (const t of handRaw) {
       if (t[0] !== 'f') continue;
       const c = flowerCount.get(t as Tile) ?? 0;
-      if (c > 0) {
-        // already represented by meld flowers
-        continue;
-      }
+      if (c > 0) continue;
       flowerTiles.push(t);
       flowerCount.set(t as Tile, 1);
     }
 
-    const flowerGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
-    const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * flowerGap + meldTileW : 0;
-    const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + meldTileW : 0;
+    // Hand tile sizing: try to make (flowers + melds + hand) occupy ~80% screen width.
+    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-    const totalW = hand.length > 0 ? (hand.length - 1) * gap + tileW : 0;
+    const calc = (tileW: number, gap: number) => {
+      const tileH = Math.round(tileW * 1.30);
+      const imgW = Math.round(tileW - 4);
+      const imgH = Math.round(tileH - 6);
+
+      // Meld tiles use the same width/height as hand tiles.
+      const meldGap = Math.round(tileW + Math.max(2, tileW * 0.04));
+
+      const flowerGap = Math.round(tileW + Math.max(2, tileW * 0.04));
+      const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * flowerGap + tileW : 0;
+      const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + tileW : 0;
+      const totalW = hand.length > 0 ? (hand.length - 1) * gap + tileW : 0;
+
+      const gapFlowerToMeld = flowerTiles.length && flatMeldTiles.length ? Math.round(Math.max(10, gap * 0.25)) : 0;
+      const gapFlowerToHand = flowerTiles.length && !flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
+      const gapMeldToHand = flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
+
+      const wholeW = flowerW + gapFlowerToMeld + meldW + (gapMeldToHand || gapFlowerToHand) + totalW;
+
+      return {
+        tileW,
+        tileH,
+        imgW,
+        imgH,
+        meldGap,
+        flowerGap,
+        flowerW,
+        meldW,
+        totalW,
+        gapFlowerToMeld,
+        gapFlowerToHand,
+        gapMeldToHand,
+        wholeW,
+      };
+    };
+
+    // Start from the old heuristic, then scale to target width.
+    let tileW = Math.round(clamp(minDim * 0.07, 42, 80));
+    let dims = calc(tileW, gap);
+
+    // Target: occupy more of the screen width (your request: wider).
+    const targetW = tableW * 0.9;
+    const scale = dims.wholeW > 0 ? clamp(targetW / dims.wholeW, 0.85, 1.6) : 1;
+
+    // Apply scale (and keep within reasonable bounds)
+    tileW = Math.round(clamp(tileW * scale, 42, 110));
+    gap = Math.round(clamp(gap * scale, 24, 110));
+    dims = calc(tileW, gap);
+
     const margin = Math.round(tableW * 0.03);
 
-    // gaps between groups
-    const gapFlowerToMeld = flowerTiles.length && flatMeldTiles.length ? Math.round(Math.max(10, gap * 0.25)) : 0;
-
-    // 花牌与手牌也需要留距离：
-    // - 如果没有碰/杠/吃，则花牌直接与手牌分组
-    // - 如果有碰/杠/吃，则由 gapMeldToHand 负责分组
-    const gapFlowerToHand = flowerTiles.length && !flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
-
-    const gapMeldToHand = flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
+    // If we scale up, the bottom of flower/meld blocks can get clipped by the viewport.
+    // Adjust Y upward so the whole group stays visible.
+    const sceneH = this.scene.scale.height;
+    const bottomLimit = sceneH - Math.round(Math.max(10, sceneH * 0.02));
+    const handBottom = y + dims.tileH / 2;
+    const meldBottom = y + dims.tileH * 0.725; // includes the small base block
+    const overflowBottom = Math.max(handBottom, meldBottom) - bottomLimit;
+    const yAdj = overflowBottom > 0 ? Math.round(y - overflowBottom) : y;
 
     // center whole group
-    const wholeW = flowerW + gapFlowerToMeld + meldW + (gapMeldToHand || gapFlowerToHand) + totalW;
-    const centeredWholeStart = (tableW - wholeW) / 2;
+    const centeredWholeStart = (tableW - dims.wholeW) / 2;
     const startWholeX = Math.max(margin, centeredWholeStart);
 
     const flowerStartX = startWholeX;
-    const meldStartX = flowerStartX + flowerW + gapFlowerToMeld;
-    const handStartX = meldStartX + meldW + (gapMeldToHand || gapFlowerToHand);
+    const meldStartX = flowerStartX + dims.flowerW + dims.gapFlowerToMeld;
+    const handStartX = meldStartX + dims.meldW + (dims.gapMeldToHand || dims.gapFlowerToHand);
 
     // 1) 花牌：最左侧
     this.renderFlowers({
       tiles: flowerTiles,
       startX: flowerStartX,
-      y,
-      gap: flowerGap,
-      tileW: meldTileW,
-      tileH: meldTileH,
+      y: yAdj,
+      gap: dims.flowerGap,
+      tileW: dims.tileW,
+      tileH: dims.tileH,
     });
 
     // 2) 碰/杠/吃：其次
     this.renderFlatMelds({
       tiles: flatMeldTiles,
       startX: meldStartX,
-      y,
-      gap: meldGap,
-      tileW: meldTileW,
-      tileH: meldTileH,
+      y: yAdj,
+      gap: dims.meldGap,
+      tileW: dims.tileW,
+      tileH: dims.tileH,
     });
 
     // 3) 手牌：含最新摸牌
@@ -211,12 +241,12 @@ export class HandView {
       hand,
       canDiscard,
       startX: handStartX,
-      y,
+      y: yAdj,
       gap,
-      tileW,
-      tileH,
-      imgW,
-      imgH,
+      tileW: dims.tileW,
+      tileH: dims.tileH,
+      imgW: dims.imgW,
+      imgH: dims.imgH,
       drawn: !!drawn,
     });
   }
@@ -235,7 +265,7 @@ export class HandView {
       const baseH = Math.max(10, Math.round(tileH * 0.15));
       const base = this.scene.add.rectangle(
         x,
-        y + tileH * 0.65,
+        y + tileH * 0.6,
         tileW,
         baseH,
         0xFFFFFF,
@@ -267,7 +297,7 @@ export class HandView {
       const tileRenderH = tileH;
       const base = this.scene.add.rectangle(
         x,
-        y + tileRenderH * 0.65,
+        y + tileRenderH * 0.6,
         tileW,
         baseH,
         0xFFFFFF,
