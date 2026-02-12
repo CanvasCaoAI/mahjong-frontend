@@ -53,7 +53,8 @@ export function uiScale(scene: Phaser.Scene): UIScale {
   const wallPadX = Math.round(w * 0.008);
   const wallPadY = Math.round(w * 0.005);
 
-  const compassSize = Math.round(w * 0.13);
+  // Center compass: smaller to keep middle area readable
+  const compassSize = Math.round(w * 0.07);
 
   const scoreBtnW = Math.round(w * 0.10);
   const scoreBtnH = Math.round(h * 0.05);

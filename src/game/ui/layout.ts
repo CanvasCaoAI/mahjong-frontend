@@ -56,7 +56,8 @@ export function computeLayout(scene: Phaser.Scene): TableLayout {
   const margin = Math.round(w * 0.03);
 
   // Keep the original “feel” but scaled
-  const handY = Math.round(h - 80 * s);
+  // Hand should sit closer to bottom edge
+  const handY = Math.round(h - 28 * s);
 
   return {
     w,

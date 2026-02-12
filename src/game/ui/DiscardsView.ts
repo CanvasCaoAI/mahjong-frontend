@@ -99,50 +99,70 @@ export class DiscardsView {
     const dxRot = tileH;
     const dyRot = tileW;
 
+    // Anchor discards near the center compass
+    const cols = 10;
+    const rows = 10;
+    const padTB = Math.round(u.w * 0.012);
+    // Spread side discards even more aggressively to avoid overlapping with top/bottom blocks.
+    const padSide = Math.round(u.w * 0.12);
+    const compassHalf = u.compassSize / 2;
+    const cx = l.compassX;
+    const cy = l.compassY;
+
+    const bottomRow0Y = Math.round(cy + compassHalf + padTB + tileH / 2);
+    const topRow0Y = Math.round(cy - compassHalf - padTB - tileH / 2);
+
+    // Spread side discards further outward to avoid overlapping with top/bottom blocks.
+    const rightCol0X = Math.round(cx + compassHalf + padSide + dxRot / 2);
+    const leftCol0X = Math.round(cx - compassHalf - padSide - dxRot / 2);
+
+    const rowStartX = Math.round(cx - (cols * dx) / 2 + dx / 2);
+    const colStartY = Math.round(cy - (rows * dyRot) / 2 + dyRot / 2);
+
     for (const seat of [0, 1, 2, 3] as const) {
       const tiles = (bySeat[seat] ?? []).slice(-40);
       if (!tiles.length) continue;
       const r = rel(seat);
 
-      const cols = l.discardCols;      // bottom/top wrap after 10
-      const rows = l.discardSideRows;  // left/right wrap after 10
-
       if (r === 0 || r === 2) {
-        // bottom/top: left->right
-        // Center the first row of `cols` tiles.
-        const startX = Math.round(l.w / 2 - (cols * dx) / 2 + dx / 2);
-        const startY = r === 0 ? l.discardBottomY : l.discardTopY;
+        // bottom/top: left->right, wrap after 10.
+        // bottom: rows go downward (away from compass)
+        // top: rows go upward (away from compass)
+        const startX = rowStartX;
+        const row0Y = r === 0 ? bottomRow0Y : topRow0Y;
+        const rowDir = r === 0 ? 1 : -1;
 
         for (let i = 0; i < tiles.length; i++) {
           const rr = Math.floor(i / cols);
           const cc = i % cols;
           const key = tileKey(tiles[i] as any);
-          const img = this.scene.add.image(startX + cc * dx, startY + rr * dy, key);
+          const img = this.scene.add.image(startX + cc * dx, row0Y + rr * dy * rowDir, key);
           img.setDisplaySize(tileW, tileH);
           img.setAlpha(0.95);
           this.sprites.push(img);
 
-          // 最后一张打出的牌：上方悬浮黄色倒三角（不停缩放）
           if (lastDiscard && lastDiscard.seat === seat && i === tiles.length - 1) {
             this.attachLastDiscardMarker(img.x, img.y, tileH);
           }
         }
       } else if (r === 1 || r === 3) {
-        // left/right: top->bottom
-        const startX = r === 1 ? l.discardLeftX : l.discardRightX;
-        const startY = l.discardSideYTop;
+        // left/right: top->bottom in a column, wrap after 10.
+        // right: columns go left->right (away from compass)
+        // left: columns go right->left (away from compass)
+        const col0X = r === 3 ? rightCol0X : leftCol0X;
+        const colDir = r === 3 ? 1 : -1;
+        const startY = colStartY;
 
         for (let i = 0; i < tiles.length; i++) {
           const cc = Math.floor(i / rows);
           const rr = i % rows;
           const key = tileKey(tiles[i] as any);
-          const img = this.scene.add.image(startX + cc * dxRot, startY + rr * dyRot, key);
+          const img = this.scene.add.image(col0X + cc * dxRot * colDir, startY + rr * dyRot, key);
           img.setAngle(90);
           img.setDisplaySize(tileW, tileH);
           img.setAlpha(0.95);
           this.sprites.push(img);
 
-          // 最后一张打出的牌：上方悬浮黄色倒三角（不停缩放）
           if (lastDiscard && lastDiscard.seat === seat && i === tiles.length - 1) {
             this.attachLastDiscardMarker(img.x, img.y, tileH);
           }

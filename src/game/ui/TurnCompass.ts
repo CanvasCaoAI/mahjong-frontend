@@ -31,7 +31,7 @@ export class TurnCompass {
     const center = scene.add.rectangle(0, 0, size * 0.36, size * 0.36, 0x000000, 0.12);
     center.setStrokeStyle(2, 0x86efac, 0.25);
 
-    const fontPx = Math.round(size * 0.28);
+    const fontPx = Math.round(size * 0.14);
     const mk = (px: number, py: number) => {
       const txt = scene.add.text(px, py, '-', {
         fontSize: `${fontPx}px`,
