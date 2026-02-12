@@ -105,8 +105,8 @@ export class OpponentHandsView {
 
       if (r === 2) {
         // Top opponent: keep near top edge, centered horizontally.
-        // Stick closer to the top edge
-        const y = Math.round(edgePad + oppH / 2);
+        // Stick very close to the top edge
+        const y = Math.round(oppH / 2 + 2);
 
         if (isWinner(seat)) {
           // 胡牌者：展示正面（使用后端结算的 handsBySeat），并在附近显示和牌内容

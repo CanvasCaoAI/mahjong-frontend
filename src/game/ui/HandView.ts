@@ -231,7 +231,8 @@ export class HandView {
     // If we scale up, the bottom of flower/meld blocks can get clipped by the viewport.
     // Adjust Y upward so the whole group stays visible.
     const sceneH = this.scene.scale.height;
-    const bottomLimit = sceneH - Math.round(Math.max(10, sceneH * 0.02));
+    // Allow hand group to sit very close to bottom edge
+    const bottomLimit = sceneH - 2;
     const handBottom = y + dims.tileH / 2;
     const meldBottom = y + dims.tileH * 0.725; // includes the small base block
     const overflowBottom = Math.max(handBottom, meldBottom) - bottomLimit;
