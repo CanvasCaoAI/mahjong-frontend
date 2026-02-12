@@ -71,16 +71,26 @@ export class HandView {
     // re-render for now (simple); later can optimize.
     this.destroy();
 
+    // Some servers may temporarily include flower tiles in hand during the "draw flower -> replace" flow.
+    // For UI we always treat Suit 'f' as flowers area (left) and never as discardable hand tiles.
+    const isFlower = (t: Tile) => t[0] === 'f';
+    const lastNonFlowerIndex = (() => {
+      for (let i = handRaw.length - 1; i >= 0; i--) {
+        if (!isFlower(handRaw[i] as Tile)) return i;
+      }
+      return -1;
+    })();
+
     // Detect freshly drawn tile.
     // - after 杠：手牌会先减少（移除杠牌）再补摸 1 张，整体长度不一定是 +1
-    // - 所以只要处于“可出牌”状态且手牌长度发生变化，就把最后一张当作“新摸牌”
-    if (canDiscard && this.lastHandRaw && handRaw.length !== this.lastHandRaw.length && handRaw.length > 0) {
-      this.pendingDrawIndex = handRaw.length - 1;
+    // - 所以只要处于“可出牌”状态且手牌长度发生变化，就把最后一张（非花）当作“新摸牌”
+    if (canDiscard && this.lastHandRaw && handRaw.length !== this.lastHandRaw.length && lastNonFlowerIndex >= 0) {
+      this.pendingDrawIndex = lastNonFlowerIndex;
     }
 
-    // First render after round start: 也把最后一张当作新摸牌
-    if (!this.lastHandRaw && canDiscard && handRaw.length > 0) {
-      this.pendingDrawIndex = handRaw.length - 1;
+    // First render after round start: 也把最后一张（非花）当作新摸牌
+    if (!this.lastHandRaw && canDiscard && lastNonFlowerIndex >= 0) {
+      this.pendingDrawIndex = lastNonFlowerIndex;
     }
 
     if (!canDiscard) this.pendingDrawIndex = null;
@@ -90,8 +100,10 @@ export class HandView {
       : null;
 
     // Auto-sort hand for display (excluding the drawn tile), but keep original indices for server actions.
+    // Also exclude flower tiles from hand display.
     const base = handRaw
       .map((tile, idx) => ({ tile, idx }))
+      .filter((x) => !isFlower(x.tile as Tile))
       .filter((x) => !drawn || x.idx !== drawn.idx)
       .sort((a, b) => {
         const sa = a.tile[0];
@@ -104,7 +116,7 @@ export class HandView {
         return na - nb;
       });
 
-    const hand = drawn ? [...base, drawn] : base;
+    const hand = (drawn && !isFlower(drawn.tile)) ? [...base, drawn] : base;
 
     // Store for next diff
     this.lastHandRaw = handRaw.slice();
@@ -127,11 +139,25 @@ export class HandView {
     const meldGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
 
     // Split melds into: flowers (left) and flat melds (peng/chi/gang)
+    // Plus: treat any 'f' tiles still present in handRaw as flowers too (UI-safety for first draw).
     const flowerTiles: Tile[] = [];
     const flatMeldTiles: Tile[] = [];
     for (const m of melds) {
       if (m.type === 'flower') flowerTiles.push(...m.tiles);
       else flatMeldTiles.push(...m.tiles);
+    }
+    // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
+    const flowerCount = new Map<Tile, number>();
+    for (const t of flowerTiles) flowerCount.set(t, (flowerCount.get(t) ?? 0) + 1);
+    for (const t of handRaw) {
+      if (t[0] !== 'f') continue;
+      const c = flowerCount.get(t as Tile) ?? 0;
+      if (c > 0) {
+        // already represented by meld flowers
+        continue;
+      }
+      flowerTiles.push(t);
+      flowerCount.set(t as Tile, 1);
     }
 
     const flowerGap = Math.round(meldTileW + Math.max(2, tileW * 0.04));
