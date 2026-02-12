@@ -22,14 +22,18 @@ export class HandView {
     y: number;
     gap: number;
     width: number;
+    xLeft?: number;
+    xRight?: number;
     onDiscard: (args: { displayIndex: number; serverIndex: number; tile: Tile }) => void;
     onInvalidDiscard?: () => void;
   };
 
-  setLayout(layout: { y: number; gap: number; width: number }) {
+  setLayout(layout: { y: number; gap: number; width: number; xLeft?: number; xRight?: number }) {
     this.opts.y = layout.y;
     this.opts.gap = layout.gap;
     this.opts.width = layout.width;
+    this.opts.xLeft = layout.xLeft;
+    this.opts.xRight = layout.xRight;
   }
 
   constructor(
@@ -38,6 +42,8 @@ export class HandView {
       y: number;
       gap: number;
       width: number;
+      xLeft?: number;
+      xRight?: number;
       onDiscard: (args: { displayIndex: number; serverIndex: number; tile: Tile }) => void;
       onInvalidDiscard?: () => void;
     }
@@ -222,8 +228,6 @@ export class HandView {
     // Use actual current hand length for drawing (but sizing is locked).
     const dims = calc(tileW, gap, hand.length);
 
-    const margin = Math.round(tableW * 0.03);
-
     // If we scale up, the bottom of flower/meld blocks can get clipped by the viewport.
     // Adjust Y upward so the whole group stays visible.
     const sceneH = this.scene.scale.height;
@@ -233,9 +237,12 @@ export class HandView {
     const overflowBottom = Math.max(handBottom, meldBottom) - bottomLimit;
     const yAdj = overflowBottom > 0 ? Math.round(y - overflowBottom) : y;
 
-    // center whole group
-    const centeredWholeStart = (tableW - dims.wholeW) / 2;
-    const startWholeX = Math.max(margin, centeredWholeStart);
+    // center whole group within a safe horizontal band (avoid overlapping side players)
+    const xLeft = this.opts.xLeft ?? 0;
+    const xRight = this.opts.xRight ?? tableW;
+    const availW = Math.max(0, xRight - xLeft);
+    const centeredWholeStart = xLeft + (availW - dims.wholeW) / 2;
+    const startWholeX = dims.wholeW > availW ? xLeft : centeredWholeStart;
 
     const flowerStartX = startWholeX;
     const meldStartX = flowerStartX + dims.flowerW + dims.gapFlowerToMeld;
@@ -283,31 +290,16 @@ export class HandView {
       const key = tileKey(tiles[i] as any);
       const img = this.scene.add.image(x, y, key);
       img.setDisplaySize(tileW, tileH);
-      img.setAlpha(0.98);
+      // Flowers: 70% opacity, no base block
+      img.setAlpha(0.70);
       img.setDepth(60);
 
-      // flower base block (under the tile)
-      const baseH = Math.max(10, Math.round(tileH * 0.15));
-      const base = this.scene.add.rectangle(
-        x,
-        y + tileH * 0.6,
-        tileW,
-        baseH,
-        0xFFFFFF,
-        0.95
-      );
-      base.setStrokeStyle(1, 0x0B1020, 0.85);
-      base.setDepth(59);
-
-      this.meldSprites.push(base, img);
+      this.meldSprites.push(img);
     }
   }
 
   private renderFlatMelds(opts: { tiles: Tile[]; startX: number; y: number; gap: number; tileW: number; tileH: number }) {
     const { tiles, startX, y, gap, tileW, tileH } = opts;
-
-    // 底部白色矩形：并加细黑描边
-    const baseH = Math.max(10, Math.round(tileH * 0.15));
 
     for (let i = 0; i < tiles.length; i++) {
       const x = startX + i * gap + tileW / 2;
@@ -316,22 +308,11 @@ export class HandView {
       const img = this.scene.add.image(x, y, key);
       img.setDisplaySize(tileW, tileH);
 
-      img.setAlpha(0.98);
+      // Melds: 70% opacity, no base block
+      img.setAlpha(0.70);
       img.setDepth(60);
 
-      const tileRenderH = tileH;
-      const base = this.scene.add.rectangle(
-        x,
-        y + tileRenderH * 0.6,
-        tileW,
-        baseH,
-        0xFFFFFF,
-        0.95
-      );
-      base.setStrokeStyle(1, 0x0B1020, 0.85);
-      base.setDepth(59);
-
-      this.meldSprites.push(base, img);
+      this.meldSprites.push(img);
     }
   }
 
