@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { PublicState, Seat } from '../../domain/types';
 import { computeLayout } from './layout';
+import { uiScale } from './uiScale';
 
 const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
@@ -19,8 +20,9 @@ export class TurnCompass {
     const l = computeLayout(scene);
     this.container = scene.add.container(l.compassX, l.compassY);
 
+    const u = uiScale(scene);
     // Square compass (smaller, proportional)
-    const size = Math.round(scene.scale.width * 0.13);
+    const size = u.compassSize;
     const half = size / 2;
 
     const frame = scene.add.rectangle(0, 0, size, size, 0x000000, 0.10);

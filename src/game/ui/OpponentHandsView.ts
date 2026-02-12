@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import type { Meld, PublicState, Seat, Tile } from '../../domain/types';
 import { backKey, tileKey } from '../../domain/tileset';
+import { uiScale } from './uiScale';
 // layout removed; this view positions itself relative to screen edges
 
 export class OpponentHandsView {
@@ -25,9 +26,11 @@ export class OpponentHandsView {
     const rel = (seat: Seat) => ((you as number) - (seat as number) + 4) % 4; // 0=bottom,1=left,2=top,3=right
     const clamp = (n: number, m: number) => Math.min(n, m);
 
-    // Opponent tile sizing (backs + melds): purely proportional to screen width (no clamps)
-    const oppW = Math.round(this.scene.scale.width * 0.025);
-    const oppH = Math.round(oppW * 1.30);
+    const u = uiScale(this.scene);
+
+    // Opponent tile sizing (backs + melds)
+    const oppW = u.oppW;
+    const oppH = u.oppH;
 
     const makeBack = (x: number, y: number, angle: number) => {
       const border = this.scene.add.rectangle(x, y, oppW + 2, oppH + 2, 0x000000, 0);
@@ -98,7 +101,7 @@ export class OpponentHandsView {
 
       const w = this.scene.scale.width;
       const h = this.scene.scale.height;
-      const edgePad = w * 0.015;
+      const edgePad = u.edgePad;
 
       if (r === 2) {
         // Top opponent: keep near top edge, centered horizontally.

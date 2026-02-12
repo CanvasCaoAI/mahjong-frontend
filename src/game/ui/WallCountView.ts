@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import type { PublicState } from '../../domain/types';
+import { uiScale } from './uiScale';
 
 // Top-left "remaining tiles" indicator.
 export class WallCountView {
@@ -8,8 +9,8 @@ export class WallCountView {
   private countText: Phaser.GameObjects.Text;
 
   constructor(scene: Phaser.Scene) {
-    // Pure proportional scaling (no clamps)
-    const fontPx = Math.round(scene.scale.width * 0.022);
+    const u = uiScale(scene);
+    const fontPx = u.wallFont;
 
     this.labelText = scene.add.text(0, 0, '剩余张数：', {
       fontSize: `${fontPx}px`,
@@ -27,8 +28,8 @@ export class WallCountView {
       strokeThickness: 4,
     }).setOrigin(0, 0);
 
-    const padX = Math.round(scene.scale.width * 0.008);
-    const padY = Math.round(scene.scale.width * 0.005);
+    const padX = u.wallPadX;
+    const padY = u.wallPadY;
     const bg = scene.add.rectangle(0, 0, 10, 10, 0x0b1020, 0.55)
       .setOrigin(0, 0)
       .setStrokeStyle(1, 0xffffff, 0.12);
@@ -58,9 +59,8 @@ export class WallCountView {
     if (this.countText.text !== v) {
       this.countText.setText(v);
       const bg = this.container.list[0] as Phaser.GameObjects.Rectangle;
-      const padX = Math.round(this.container.scene.scale.width * 0.008);
-      const padY = Math.round(this.container.scene.scale.width * 0.005);
-      this.reflow(bg, padX, padY);
+      const u = uiScale(this.container.scene);
+      this.reflow(bg, u.wallPadX, u.wallPadY);
     }
   }
 

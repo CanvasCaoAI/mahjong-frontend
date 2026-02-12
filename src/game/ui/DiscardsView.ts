@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { PublicState, Seat, Tile } from '../../domain/types';
 import { tileKey } from '../../domain/tileset';
 import { computeLayout } from './layout';
+import { uiScale } from './uiScale';
 
 export class DiscardsView {
   private sprites: Phaser.GameObjects.Image[] = [];
@@ -84,10 +85,11 @@ export class DiscardsView {
     const lastDiscard = (st.discards && st.discards.length) ? st.discards[st.discards.length - 1] : null;
 
     const l = computeLayout(this.scene);
+    const u = uiScale(this.scene);
 
-    // Tile visual size (in-game): purely proportional to screen width
-    const tileW = Math.round(l.w * 0.03);
-    const tileH = Math.round(tileW * 1.28);
+    // Tile visual size (in-game): derived from global scale constants
+    const tileW = u.discardW;
+    const tileH = u.discardH;
 
     // No-gap spacing (tiles touch each other)
     const dx = tileW;

@@ -11,6 +11,7 @@ import { OpponentHandsView } from '../ui/OpponentHandsView';
 import { ScoreboardView } from '../ui/ScoreboardView';
 import { HandView } from '../ui/HandView';
 import { computeLayout } from '../ui/layout';
+import { uiScale } from '../ui/uiScale';
 
 const tableBgKey = 'table_bg';
 const tableBgUrl = '/assets/ui/table-solid-darkgreen.svg';
@@ -175,8 +176,9 @@ export class GameScene extends Phaser.Scene {
     // Hand + other views
     // Safe band for bottom hand to avoid overlapping side opponents.
     // (Side opponent tiles are sized proportional to screen width in OpponentHandsView)
-    const oppW = Math.round(this.scale.width * 0.025);
-    const pad = Math.round(this.scale.width * 0.01);
+    const u = uiScale(this);
+    const oppW = u.oppW;
+    const pad = Math.round(u.w * 0.01);
     const xLeft = l.oppSideXInset + oppW / 2 + pad;
     const xRight = l.w - l.oppSideXInset - oppW / 2 - pad;
 
