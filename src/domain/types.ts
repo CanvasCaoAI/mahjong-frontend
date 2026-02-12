@@ -28,6 +28,20 @@ export type PublicState = {
   pengAvailable: boolean;
   chiAvailable: boolean;
   message: string;
+
+  // Scoreboard
+  scores: [number, number, number, number];
+  round: number;
+  roundHistory: Array<{
+    round: number;
+    winners: Seat[];
+    winTile: Tile | null;
+    winType: 'self' | 'discard' | 'unknown';
+    fromSeat: Seat | null;
+    reason: string;
+    deltaBySeat: Record<Seat, number>;
+  }>;
+
   result?: { winners: Seat[]; handsBySeat: Partial<Record<Seat, Tile[]>> };
   winInfo?: { reason: string };
 };

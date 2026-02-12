@@ -7,6 +7,7 @@ import { ActionPrompt } from '../ui/ActionPrompt';
 import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
 import { OpponentHandsView } from '../ui/OpponentHandsView';
+import { ScoreboardView } from '../ui/ScoreboardView';
 import { HandView } from '../ui/HandView';
 import { computeLayout } from '../ui/layout';
 
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private turnCompass!: TurnCompass;
   private opponentHands!: OpponentHandsView;
   private handView!: HandView;
+  private scoreboardView!: ScoreboardView;
 
   constructor() {
     super('Game');
@@ -77,6 +79,7 @@ export class GameScene extends Phaser.Scene {
     this.discardsView = new DiscardsView(this);
     this.turnCompass = new TurnCompass(this);
     this.opponentHands = new OpponentHandsView(this);
+    this.scoreboardView = new ScoreboardView(this);
 
     const l0 = computeLayout(this);
     this.handView = new HandView(this, {
@@ -103,6 +106,7 @@ export class GameScene extends Phaser.Scene {
       this.turnCompass?.destroy();
       this.opponentHands?.destroy();
       this.handView?.destroy();
+      this.scoreboardView?.destroy();
 
       for (const k of Object.keys(this.winTexts) as any) {
         this.winTexts[k as Seat]?.destroy();
@@ -135,6 +139,9 @@ export class GameScene extends Phaser.Scene {
     );
 
     // 顶部不显示 message。
+
+    // Scoreboard
+    this.scoreboardView?.update(st);
 
     // Phase state
     const canDraw = !!(connected && st && st.started && st.yourSeat !== null && st.turn === st.yourSeat && st.phase === 'draw');
