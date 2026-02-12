@@ -25,6 +25,7 @@ export class GameScene extends Phaser.Scene {
   private hudText!: Phaser.GameObjects.Text;
   private msgText!: Phaser.GameObjects.Text;
   private winTexts: Partial<Record<Seat, Phaser.GameObjects.Text>> = {};
+  private winTextTweens: Partial<Record<Seat, Phaser.Tweens.Tween>> = {};
 
   private animatingDiscard = false;
   private autoDrawToken: string | null = null;
@@ -109,9 +110,14 @@ export class GameScene extends Phaser.Scene {
       this.scoreboardView?.destroy();
 
       for (const k of Object.keys(this.winTexts) as any) {
-        this.winTexts[k as Seat]?.destroy();
+        const seat = k as Seat;
+        this.winTextTweens[seat]?.stop();
+        this.winTextTweens[seat]?.remove();
+        this.winTextTweens[seat] = undefined;
+        this.winTexts[seat]?.destroy();
       }
       this.winTexts = {};
+      this.winTextTweens = {};
     });
 
     this.updateUI();
@@ -193,8 +199,7 @@ export class GameScene extends Phaser.Scene {
       const cy = l.compassY;
       const minDim = Math.min(l.w, l.h);
       const offY = Math.round(minDim * 0.22);
-      const offX = Math.round(minDim * 0.42);
-
+      const offX = Math.round(minDim * 0.56);
       const posFor = (seat: Seat) => {
         const r = rel(seat);
         if (r === 0) return { x: cx, y: cy + offY };
@@ -205,18 +210,46 @@ export class GameScene extends Phaser.Scene {
 
       for (const w of winners) {
         if (!this.winTexts[w]) {
+          const fontPx = Math.round(Math.max(44, minDim * 0.055));
           this.winTexts[w] = this.add.text(0, 0, '', {
-            fontSize: '36px',
-            color: '#FBBF24',
+            fontFamily: '"KaiTi","STKaiti","Kaiti SC",serif',
+            fontSize: `${fontPx}px`,
+            color: '#FDE68A',
             fontStyle: 'bold',
+            stroke: '#0B1020',
+            strokeThickness: 10,
+            shadow: {
+              offsetX: 0,
+              offsetY: 6,
+              color: '#000000',
+              blur: 8,
+              fill: true,
+              stroke: true,
+            },
+            backgroundColor: 'rgba(11,16,32,0.65)',
+            padding: { x: 16, y: 10 },
           }).setOrigin(0.5);
           this.winTexts[w]!.setDepth(200);
         }
 
         const p = posFor(w);
-        this.winTexts[w]!.setPosition(p.x, p.y);
-        this.winTexts[w]!.setText(reason);
-        this.winTexts[w]!.setVisible(true);
+        const t = this.winTexts[w]!;
+        t.setPosition(p.x, p.y);
+        t.setText(reason);
+        t.setVisible(true);
+
+        // Pulse animation (make it obvious)
+        this.winTextTweens[w]?.stop();
+        this.winTextTweens[w]?.remove();
+        t.setScale(1.0);
+        this.winTextTweens[w] = this.tweens.add({
+          targets: t,
+          scale: 1.12,
+          duration: 520,
+          yoyo: true,
+          repeat: -1,
+          ease: 'Sine.easeInOut',
+        });
       }
     }
 
