@@ -12,10 +12,11 @@ export class HandView {
   private lastHandRaw: Tile[] | null = null;
   private pendingDrawIndex: number | null = null;
 
-  // Lock sizing for the whole round (until full page refresh).
-  // Do NOT recompute on resize or on hand length changes (13/14).
+  // Lock sizing for the whole round, but allow recompute when flowers/melds change.
+  // Do NOT recompute on hand length changes (13/14) to avoid jitter.
   private lockedTileW: number | null = null;
   private lockedGap: number | null = null;
+  private lockedSig: string | null = null; // recompute trigger signature
 
   private scene: Phaser.Scene;
   private opts: {
@@ -151,7 +152,17 @@ export class HandView {
     if (handRaw.length === 0 && flowerTiles.length === 0 && flatMeldTiles.length === 0) {
       this.lockedTileW = null;
       this.lockedGap = null;
+      this.lockedSig = null;
     }
+
+    // Recompute sizing only when flowers/melds composition changes (e.g. 补花导致花牌数量增加).
+    // This avoids constant re-layout jitter on 13/14 hand oscillation.
+    const sig = `${flowerTiles.length}:${flatMeldTiles.length}`;
+    if (this.lockedSig && this.lockedSig !== sig) {
+      this.lockedTileW = null;
+      this.lockedGap = null;
+    }
+    this.lockedSig = sig;
     // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
     const flowerCount = new Map<Tile, number>();
     for (const t of flowerTiles) flowerCount.set(t, (flowerCount.get(t) ?? 0) + 1);
