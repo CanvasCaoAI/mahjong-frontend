@@ -242,25 +242,23 @@ export class ScoreboardView {
       // Keep tileName helper referenced (future-friendly), but do not display it per UX.
       void this.tileName(r.winTile as any);
 
-      // 左侧：胡牌者（可能多人）名字 + 加减分
-      const left = (r.winners ?? [])
-        .map((s) => `${nameOf(s)} ${this.scoreDelta(r.deltaBySeat[s])}`)
-        .join('、');
-
-      // 右侧：点炮者（仅在点炮时显示）名字 + 加减分
-      let right = '';
-      if (r.winType === 'discard' && r.fromSeat !== null && r.fromSeat !== undefined) {
-        const fs = r.fromSeat as Seat;
-        right = `${nameOf(fs)} ${this.scoreDelta(r.deltaBySeat[fs])}`;
-      }
-
       // 流局：直接显示“第X轮：流局”
       if (!r.winners || r.winners.length === 0) {
         out.push(`第${r.round}轮：流局`);
         continue;
       }
 
-      // 目标格式：第3轮：张三 +2 ｜ 李四 -2
+      // 只按你说的格式显示：胡家 +delta ｜ 点炮家 -delta
+      // 若一炮多响，这里先取第一个胡家展示（保持简洁）。
+      const w0 = (r.winners[0] ?? 0) as Seat;
+      const left = `${nameOf(w0)} ${this.scoreDelta(r.deltaBySeat[w0])}`;
+
+      let right = '';
+      if (r.winType === 'discard' && r.fromSeat !== null && r.fromSeat !== undefined) {
+        const fs = r.fromSeat as Seat;
+        right = `${nameOf(fs)} ${this.scoreDelta(r.deltaBySeat[fs])}`;
+      }
+
       out.push(`第${r.round}轮：${left}${right ? ` ｜ ${right}` : ''}`);
     }
 
