@@ -254,6 +254,12 @@ export class ScoreboardView {
         right = `${nameOf(fs)} ${this.scoreDelta(r.deltaBySeat[fs])}`;
       }
 
+      // 流局：直接显示“第X轮：流局”
+      if (!r.winners || r.winners.length === 0) {
+        out.push(`第${r.round}轮：流局`);
+        continue;
+      }
+
       // 目标格式：第3轮：张三 +2 ｜ 李四 -2
       out.push(`第${r.round}轮：${left}${right ? ` ｜ ${right}` : ''}`);
     }
