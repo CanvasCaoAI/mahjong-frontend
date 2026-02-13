@@ -44,10 +44,12 @@ export class ChiPickerView {
 
     this.bg = scene.add.rectangle(0, 0, pw, ph, 0x0b1020, 0.92).setStrokeStyle(1, 0xffffff, 0.14);
 
-    this.title = scene.add.text(-pw / 2 + 16, -ph / 2 + 10, '选择吃牌组合', {
+    // Title removed per UX feedback (keep modal clean)
+    this.title = scene.add.text(-pw / 2 + 16, -ph / 2 + 10, '', {
       fontSize: `${Math.round(w * 0.018)}px`,
       color: '#E2E8F0',
     });
+    this.title.setVisible(false);
 
     // Cancel button (top-right)
     this.cancelBtn = this.makeTextBtn(pw / 2 - 54, -ph / 2 + 26, 72, 30, '取消', () => {
@@ -109,7 +111,10 @@ export class ChiPickerView {
     const gap = Math.round(tileW * 0.18);
 
     const padX = 18;
-    const topY = -ph / 2 + 44;
+    const topY = -ph / 2 + 18;
+
+    // 垂直居中基线：所有牌（被吃的牌 + 组合牌）都以这个 y 为中心
+    const centerY = 0;
 
     // 左侧单独显示「被吃的牌」
     const claimLabel = this.scene.add
@@ -120,13 +125,13 @@ export class ChiPickerView {
       .setOrigin(0, 0);
 
     const claimX = -pw / 2 + padX + tileW / 2;
-    const claimY = topY + 16 + tileH / 2;
+    const claimY = centerY;
     const claimImg = this.scene.add.image(claimX, claimY, tileKey(claimTile as any));
     claimImg.setDisplaySize(tileW, tileH);
 
     // 分隔线
     const sepX = -pw / 2 + padX + tileW + 18;
-    const sep = this.scene.add.rectangle(sepX, 6, 1, ph - 26, 0xffffff, 0.10).setOrigin(0.5);
+    const sep = this.scene.add.rectangle(sepX, 0, 1, ph - 22, 0xffffff, 0.10).setOrigin(0.5);
 
     this.optionObjs.push(claimLabel, claimImg, sep);
     this.container.add([claimLabel, claimImg, sep]);
@@ -136,11 +141,12 @@ export class ChiPickerView {
     const optAreaX1 = pw / 2 - padX;
     const optAreaW = optAreaX1 - optAreaX0;
 
-    const itemW = tileW * 2 + gap * 3;
+    // 每个组合之间的间距变大（不要箭头）
+    const itemW = tileW * 2 + gap * 6;
     const cols = Math.max(1, Math.floor(optAreaW / itemW));
 
-    const gridTop = -ph / 2 + ph * 0.56;
-    const rowGap = Math.round(tileH * 0.22) + 12;
+    const gridTop = 0; // 牌整体垂直居中
+    const rowGap = Math.round(tileH * 0.32) + 16;
 
     const usedCols = Math.min(cols, opts.length);
     const gridW = usedCols * itemW;
@@ -155,8 +161,8 @@ export class ChiPickerView {
       const y = Math.round(gridTop + r * rowGap);
 
       const hit = this.scene.add
-        .rectangle(x, y, itemW - 14, tileH + 18, 0xffffff, 0.04)
-        .setStrokeStyle(1, 0xffffff, 0.14)
+        .rectangle(x, y, itemW - 18, tileH + 18, 0xffffff, 0.03)
+        .setStrokeStyle(1, 0xffffff, 0.12)
         .setOrigin(0.5);
       hit.setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => {
@@ -164,20 +170,15 @@ export class ChiPickerView {
         this.onPick?.({ a, b });
       });
 
-      const imgA = this.scene.add.image(x - (tileW / 2 + gap), y, tileKey(a as any));
+      // 两张牌上下居中（y=center）
+      const imgA = this.scene.add.image(x - (tileW / 2 + gap * 1.6), y, tileKey(a as any));
       imgA.setDisplaySize(tileW, tileH);
 
-      // 小箭头
-      const arrow = this.scene.add.text(x, y + 1, '→', {
-        fontSize: `${Math.round(w * 0.018)}px`,
-        color: '#94A3B8',
-      }).setOrigin(0.5);
-
-      const imgB = this.scene.add.image(x + (tileW / 2 + gap), y, tileKey(b as any));
+      const imgB = this.scene.add.image(x + (tileW / 2 + gap * 1.6), y, tileKey(b as any));
       imgB.setDisplaySize(tileW, tileH);
 
-      this.optionObjs.push(hit, imgA, arrow, imgB);
-      this.container.add([hit, imgA, arrow, imgB]);
+      this.optionObjs.push(hit, imgA, imgB);
+      this.container.add([hit, imgA, imgB]);
     }
 
     this.container.setPosition(Math.round(w / 2), Math.round(h / 2));
