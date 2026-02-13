@@ -39,21 +39,33 @@ export class ScoreboardView {
 
     const bg = scene.add.rectangle(0, 0, pw, ph, 0x0b1020, 0.92).setStrokeStyle(1, 0xffffff, 0.14);
 
-    const title = scene.add.text(-pw / 2 + 16, -ph / 2 + 12, '记分板', { fontSize: `${Math.round(w * 0.020)}px`, color: '#E2E8F0' });
+    const topPad = 12;
+    const headerY = -ph / 2 + topPad;
 
-    const closeHint = scene.add.text(pw / 2 - 16, -ph / 2 + 14, '点击空白处关闭', { fontSize: `${Math.round(w * 0.012)}px`, color: '#AAB3C7' }).setOrigin(1, 0);
+    const title = scene.add.text(-pw / 2 + 16, headerY, '记分板', { fontSize: `${Math.round(w * 0.020)}px`, color: '#E2E8F0' });
 
-    this.scoreText = scene.add.text(-pw / 2 + 16, -ph / 2 + 48, '', {
+    const closeHint = scene.add.text(pw / 2 - 16, headerY + 2, '点击空白处关闭', {
+      fontSize: `${Math.round(w * 0.012)}px`,
+      color: '#AAB3C7'
+    }).setOrigin(1, 0);
+
+    this.scoreText = scene.add.text(-pw / 2 + 16, headerY + 36, '', {
       fontSize: `${Math.round(w * 0.016)}px`,
       color: '#E2E8F0',
       lineSpacing: Math.round(w * 0.006),
+      wordWrap: { width: pw - 32 },
     });
 
-    const divider = scene.add.rectangle(0, -ph / 2 + Math.round(h * 0.20), pw - 28, 1, 0xffffff, 0.10);
+    // Use panel height (ph) for layout — avoid mixing in full-screen h which can break positioning.
+    const dividerY = -ph / 2 + Math.round(ph * 0.30);
+    const divider = scene.add.rectangle(0, dividerY, pw - 28, 1, 0xffffff, 0.10);
 
-    const roundsTitle = scene.add.text(-pw / 2 + 16, -ph / 2 + Math.round(h * 0.225), '每轮记录', { fontSize: `${Math.round(w * 0.014)}px`, color: '#AAB3C7' });
+    const roundsTitle = scene.add.text(-pw / 2 + 16, dividerY + 14, '每轮记录', {
+      fontSize: `${Math.round(w * 0.014)}px`,
+      color: '#AAB3C7'
+    });
 
-    this.roundsText = scene.add.text(-pw / 2 + 16, -ph / 2 + Math.round(h * 0.265), '', {
+    this.roundsText = scene.add.text(-pw / 2 + 16, dividerY + 40, '', {
       fontSize: `${Math.round(w * 0.013)}px`,
       color: '#E2E8F0',
       lineSpacing: Math.round(w * 0.006),
