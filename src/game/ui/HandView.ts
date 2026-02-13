@@ -208,6 +208,7 @@ export class HandView {
     let tileW: number;
 
     // If we already locked a size, only shrink when current content would overflow target width.
+    // Shrink proportionally from the current locked size (instead of recomputing from scratch) to avoid big jumps.
     if (this.lockedTileW && this.lockedGap) {
       tileW = this.lockedTileW;
       gap = this.lockedGap;
@@ -217,18 +218,18 @@ export class HandView {
       const dimsLocked = calc(tileW, gap, handLenForSizing);
       const targetW = tableW * 0.8;
 
-      // If overflow (e.g. flowers increased), unlock and recompute smaller.
-      if (dimsLocked.wholeW > targetW * 1.02) {
-        this.lockedTileW = null;
-        this.lockedGap = null;
+      if (dimsLocked.wholeW > targetW * 1.02 && dimsLocked.wholeW > 0) {
+        const scale = targetW / dimsLocked.wholeW;
+        const next = Math.max(18, Math.floor(tileW * scale));
+        this.lockedTileW = next;
+        this.lockedGap = next;
+        tileW = next;
+        gap = next;
       }
     }
 
-    if (this.lockedTileW && this.lockedGap) {
-      tileW = this.lockedTileW;
-      gap = this.lockedGap;
-    } else {
-      // First compute: size against worst-case 14 tiles to avoid 13/14 oscillation.
+    // First render in a round (no lock yet): compute a size that targets 80% width.
+    if (!this.lockedTileW || !this.lockedGap) {
       const handLenForSizing = Math.max(hand.length, 14);
       tileW = Math.round(minDim * 0.07);
       gap = tileW;
@@ -237,11 +238,14 @@ export class HandView {
       const targetW = tableW * 0.8;
       const scale = dims0.wholeW > 0 ? (targetW / dims0.wholeW) : 1;
 
-      tileW = Math.round(tileW * scale);
+      tileW = Math.max(18, Math.round(tileW * scale));
       gap = tileW;
 
       this.lockedTileW = tileW;
       this.lockedGap = gap;
+    } else {
+      tileW = this.lockedTileW;
+      gap = this.lockedGap;
     }
 
     // Use actual current hand length for drawing (but sizing is locked).
