@@ -239,23 +239,23 @@ export class ScoreboardView {
     const out: string[] = [];
     for (const r of page) {
       const nameOf = (s: Seat) => st.players?.[s]?.name ?? `玩家${s + 1}`;
-      const tile = this.tileName(r.winTile as any);
+      // Keep tileName helper referenced (future-friendly), but do not display it per UX.
+      void this.tileName(r.winTile as any);
 
-      // winners: show names + delta
-      const wParts = (r.winners ?? []).map((s) => `${nameOf(s)}${this.scoreDelta(r.deltaBySeat[s])}`);
-      const winnersStr = wParts.join('、');
+      // 左侧：胡牌者（可能多人）名字 + 加减分
+      const left = (r.winners ?? [])
+        .map((s) => `${nameOf(s)} ${this.scoreDelta(r.deltaBySeat[s])}`)
+        .join('、');
 
-      // 点炮人：只显示名字 + delta
-      let fromStr = '';
+      // 右侧：点炮者（仅在点炮时显示）名字 + 加减分
+      let right = '';
       if (r.winType === 'discard' && r.fromSeat !== null && r.fromSeat !== undefined) {
         const fs = r.fromSeat as Seat;
-        fromStr = `；点炮：${nameOf(fs)}${this.scoreDelta(r.deltaBySeat[fs])}`;
+        right = `${nameOf(fs)} ${this.scoreDelta(r.deltaBySeat[fs])}`;
       }
 
-      // 每轮只显示：胡的人 + 胡的牌名 + 加减分（点炮附带点炮人）
-      // 例：第3轮：张三 胡 7万 +2；点炮：李四 -2
-      const head = winnersStr ? `${winnersStr} 胡 ${tile}` : `胡 ${tile}`;
-      out.push(`第${r.round}轮：${head}${fromStr}`);
+      // 目标格式：第3轮：张三 +2 ｜ 李四 -2
+      out.push(`第${r.round}轮：${left}${right ? ` ｜ ${right}` : ''}`);
     }
 
     this.roundsText.setText(out.join('\n'));
