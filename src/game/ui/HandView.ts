@@ -230,14 +230,17 @@ export class HandView {
       gap = tileW;
 
       this.baseTileW = tileW;
-      this.baseDen = baseHand + extra;
+      // Base denominator is always 14 (ignore current extras). We only shrink when extras increase.
+      this.baseDen = baseHand;
     }
 
     // Proportional shrink when NEW flowers / gangs are added.
     // Example: extra increases by 1 => tileW = tileW0 * baseDen / (baseHand + extra)
     const denNow = baseHand + extra;
-    const den0 = this.baseDen ?? denNow;
-    const scaleNow = den0 / denNow;
+    const den0 = this.baseDen ?? baseHand;
+
+    // Only shrink (never grow bigger than base) to keep visuals stable.
+    const scaleNow = Math.min(1, den0 / denNow);
 
     tileW = Math.max(28, Math.round((this.baseTileW ?? 28) * scaleNow));
     gap = tileW;
