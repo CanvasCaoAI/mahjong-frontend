@@ -78,13 +78,8 @@ export class ScoreboardView {
     this.dividerY = -this.ph / 2 + Math.round(this.ph * 0.32);
     const divider = scene.add.rectangle(0, this.dividerY, this.pw - 28, 1, 0xffffff, 0.10);
 
-    const roundsTitle = scene.add.text(-this.pw / 2 + 16, this.dividerY + 14, '每轮记录', {
-      fontSize: `${Math.round(w * 0.014)}px`,
-      color: '#AAB3C7'
-    });
-
-    // 页码/提示
-    this.roundsPageText = scene.add.text(this.pw / 2 - 16, this.dividerY + 16, '', {
+    // 页码/提示（不再显示“每轮记录”标题，保持界面干净）
+    this.roundsPageText = scene.add.text(this.pw / 2 - 16, this.dividerY + 14, '', {
       fontSize: `${Math.round(w * 0.012)}px`,
       color: '#AAB3C7'
     }).setOrigin(1, 0);
@@ -136,7 +131,6 @@ export class ScoreboardView {
       closeHint,
       this.scoreText,
       divider,
-      roundsTitle,
       this.roundsPageText,
       this.roundsText,
       this.prevBtn,
@@ -151,6 +145,25 @@ export class ScoreboardView {
 
   private seatName(s: Seat) {
     return ['东', '南', '西', '北'][s] ?? String(s);
+  }
+
+  private tileName(t: string | null | undefined): string {
+    if (!t) return '-';
+    const suit = t[0];
+    const n = Number(t.slice(1));
+    if (suit === 'm') return `${n}万`;
+    if (suit === 'p') return `${n}筒`;
+    if (suit === 's') return `${n}索`;
+    if (suit === 'z') {
+      const map: Record<number, string> = { 1: '东', 2: '南', 3: '西', 4: '北', 5: '中', 6: '发', 7: '白' };
+      return map[n] ?? `字${n}`;
+    }
+    if (suit === 'f') return `花${n}`;
+    return String(t);
+  }
+
+  private scoreDelta(n: number): string {
+    return `${n >= 0 ? '+' : ''}${n}`;
   }
 
   toggle() {
@@ -225,13 +238,24 @@ export class ScoreboardView {
 
     const out: string[] = [];
     for (const r of page) {
-      const winners = r.winners.map(this.seatName).join(',');
-      const tile = r.winTile ?? '-';
-      const type = r.winType === 'self' ? '自摸' : (r.winType === 'discard' ? '点炮' : '胡');
-      const delta = ([0, 1, 2, 3] as const)
-        .map(s => `${this.seatName(s)}${r.deltaBySeat[s] >= 0 ? '+' : ''}${r.deltaBySeat[s]}`)
-        .join(' ');
-      out.push(`第${r.round}轮：${winners} ${type} ${tile}（${r.reason}）  ${delta}`);
+      const nameOf = (s: Seat) => st.players?.[s]?.name ?? `玩家${s + 1}`;
+      const tile = this.tileName(r.winTile as any);
+
+      // winners: show names + delta
+      const wParts = (r.winners ?? []).map((s) => `${nameOf(s)}${this.scoreDelta(r.deltaBySeat[s])}`);
+      const winnersStr = wParts.join('、');
+
+      // 点炮人：只显示名字 + delta
+      let fromStr = '';
+      if (r.winType === 'discard' && r.fromSeat !== null && r.fromSeat !== undefined) {
+        const fs = r.fromSeat as Seat;
+        fromStr = `；点炮：${nameOf(fs)}${this.scoreDelta(r.deltaBySeat[fs])}`;
+      }
+
+      // 每轮只显示：胡的人 + 胡的牌名 + 加减分（点炮附带点炮人）
+      // 例：第3轮：张三 胡 7万 +2；点炮：李四 -2
+      const head = winnersStr ? `${winnersStr} 胡 ${tile}` : `胡 ${tile}`;
+      out.push(`第${r.round}轮：${head}${fromStr}`);
     }
 
     this.roundsText.setText(out.join('\n'));
