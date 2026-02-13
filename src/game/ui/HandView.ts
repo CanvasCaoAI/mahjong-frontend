@@ -213,14 +213,14 @@ export class HandView {
       tileW = this.lockedTileW;
       gap = this.lockedGap;
 
-      // Use worst-case 14 tiles for sizing stability.
-      const handLenForSizing = Math.max(hand.length, 14);
+      // For overflow detection/shrink, use current hand length (avoid over-shrinking on 13 tiles).
+      const handLenForSizing = hand.length;
       const dimsLocked = calc(tileW, gap, handLenForSizing);
       const targetW = tableW * 0.8;
 
       if (dimsLocked.wholeW > targetW * 1.02 && dimsLocked.wholeW > 0) {
         const scale = targetW / dimsLocked.wholeW;
-        const next = Math.max(18, Math.floor(tileW * scale));
+        const next = Math.max(28, Math.floor(tileW * scale));
         this.lockedTileW = next;
         this.lockedGap = next;
         tileW = next;
@@ -238,7 +238,7 @@ export class HandView {
       const targetW = tableW * 0.8;
       const scale = dims0.wholeW > 0 ? (targetW / dims0.wholeW) : 1;
 
-      tileW = Math.max(18, Math.round(tileW * scale));
+      tileW = Math.max(28, Math.round(tileW * scale));
       gap = tileW;
 
       this.lockedTileW = tileW;
