@@ -12,11 +12,11 @@ export class HandView {
   private lastHandRaw: Tile[] | null = null;
   private pendingDrawIndex: number | null = null;
 
-  // Lock sizing for the whole round, but allow recompute when flowers/melds change.
+  // Lock sizing for the whole round.
   // Do NOT recompute on hand length changes (13/14) to avoid jitter.
+  // Only shrink when the overall group would overflow (e.g. lots of flowers/kongs).
   private lockedTileW: number | null = null;
   private lockedGap: number | null = null;
-  private lockedSig: string | null = null; // recompute trigger signature
 
   private scene: Phaser.Scene;
   private opts: {
@@ -152,17 +152,7 @@ export class HandView {
     if (handRaw.length === 0 && flowerTiles.length === 0 && flatMeldTiles.length === 0) {
       this.lockedTileW = null;
       this.lockedGap = null;
-      this.lockedSig = null;
     }
-
-    // Recompute sizing only when flowers/melds composition changes (e.g. 补花导致花牌数量增加).
-    // This avoids constant re-layout jitter on 13/14 hand oscillation.
-    const sig = `${flowerTiles.length}:${flatMeldTiles.length}`;
-    if (this.lockedSig && this.lockedSig !== sig) {
-      this.lockedTileW = null;
-      this.lockedGap = null;
-    }
-    this.lockedSig = sig;
     // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
     const flowerCount = new Map<Tile, number>();
     for (const t of flowerTiles) flowerCount.set(t, (flowerCount.get(t) ?? 0) + 1);
@@ -216,6 +206,24 @@ export class HandView {
 
     // Hand gap should track tile width (no independent scaling).
     let tileW: number;
+
+    // If we already locked a size, only shrink when current content would overflow target width.
+    if (this.lockedTileW && this.lockedGap) {
+      tileW = this.lockedTileW;
+      gap = this.lockedGap;
+
+      // Use worst-case 14 tiles for sizing stability.
+      const handLenForSizing = Math.max(hand.length, 14);
+      const dimsLocked = calc(tileW, gap, handLenForSizing);
+      const targetW = tableW * 0.8;
+
+      // If overflow (e.g. flowers increased), unlock and recompute smaller.
+      if (dimsLocked.wholeW > targetW * 1.02) {
+        this.lockedTileW = null;
+        this.lockedGap = null;
+      }
+    }
+
     if (this.lockedTileW && this.lockedGap) {
       tileW = this.lockedTileW;
       gap = this.lockedGap;
@@ -224,7 +232,7 @@ export class HandView {
       const handLenForSizing = Math.max(hand.length, 14);
       tileW = Math.round(minDim * 0.07);
       gap = tileW;
-      let dims0 = calc(tileW, gap, handLenForSizing);
+      const dims0 = calc(tileW, gap, handLenForSizing);
 
       const targetW = tableW * 0.8;
       const scale = dims0.wholeW > 0 ? (targetW / dims0.wholeW) : 1;
