@@ -51,7 +51,7 @@ export class ScoreboardView {
 
     const bg = scene.add.rectangle(0, 0, this.pw, this.ph, 0x0b1020, 0.92).setStrokeStyle(1, 0xffffff, 0.14);
 
-    const topPad = 12;
+    const topPad = Math.round(Math.max(14, w * 0.012));
     const headerY = -this.ph / 2 + topPad;
 
     const title = scene.add.text(-this.pw / 2 + 16, headerY, '记分板', {
@@ -65,7 +65,8 @@ export class ScoreboardView {
     }).setOrigin(1, 0);
 
     // 四行分数：缩小一点，更紧凑
-    this.scoreText = scene.add.text(-this.pw / 2 + 16, headerY + 36, '', {
+    const headerToScores = Math.round(Math.max(34, w * 0.030));
+    this.scoreText = scene.add.text(-this.pw / 2 + 16, headerY + headerToScores, '', {
       fontSize: `${Math.round(w * 0.014)}px`,
       color: '#E2E8F0',
       lineSpacing: Math.round(w * 0.003),
@@ -73,7 +74,8 @@ export class ScoreboardView {
     });
 
     // Use panel height (ph) for layout — avoid mixing in full-screen h which can break positioning.
-    this.dividerY = -this.ph / 2 + Math.round(this.ph * 0.30);
+    // Divider sits below the 4 score lines; base it on panel height but keep some breathing room on large screens.
+    this.dividerY = -this.ph / 2 + Math.round(this.ph * 0.32);
     const divider = scene.add.rectangle(0, this.dividerY, this.pw - 28, 1, 0xffffff, 0.10);
 
     const roundsTitle = scene.add.text(-this.pw / 2 + 16, this.dividerY + 14, '每轮记录', {
