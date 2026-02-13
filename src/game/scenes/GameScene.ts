@@ -4,6 +4,7 @@ import { ALL_TILES, backKey, backUrl, tileKey, tileUrl } from '../../domain/tile
 import { client, onState } from '../../net/clientSingleton';
 
 import { ActionPrompt } from '../ui/ActionPrompt';
+import { ChiPickerView } from '../ui/ChiPickerView';
 import { DiscardsView } from '../ui/DiscardsView';
 import { TurnCompass } from '../ui/TurnCompass';
 import { WallCountView } from '../ui/WallCountView';
@@ -33,6 +34,7 @@ export class GameScene extends Phaser.Scene {
   private autoDrawToken: string | null = null;
 
   private actionPrompt!: ActionPrompt;
+  private chiPicker!: ChiPickerView;
   private discardsView!: DiscardsView;
   private turnCompass!: TurnCompass;
   private wallCountView!: WallCountView;
@@ -76,9 +78,38 @@ export class GameScene extends Phaser.Scene {
       onHu: () => client.checkWin(),
       onGang: () => client.gang(),
       onPeng: () => client.peng(),
-      onChi: () => client.chi(),
+      onChi: () => {
+        const st = this.state;
+        const opts = st?.chiOptions ?? [];
+        if (st && opts.length > 1) {
+          this.chiPicker.show(st);
+          return true;
+        }
+        if (st && opts.length === 1) {
+          const [a, b] = opts[0]!;
+          client.chi({ a, b } as any);
+          return false;
+        }
+        client.chi();
+        return false;
+      },
       onPassClaim: () => client.passClaim(),
     });
+
+    this.chiPicker = new ChiPickerView(
+      this,
+      ({ a, b }) => {
+        client.chi({ a, b } as any);
+        // 选中组合后，按 claim 动作处理：隐藏按钮并写入 passed
+        this.actionPrompt.afterClaimAction();
+      },
+      {
+        onCancel: () => {
+          // 取消后需要重新显示「吃/过」等按钮
+          this.actionPrompt.restoreFromSuppressed(this.state);
+        }
+      }
+    );
 
     this.discardsView = new DiscardsView(this);
     this.turnCompass = new TurnCompass(this);
@@ -107,6 +138,7 @@ export class GameScene extends Phaser.Scene {
       this._stateUnsub = null;
 
       this.actionPrompt?.destroy();
+      this.chiPicker?.destroy();
       this.discardsView?.destroy();
       this.turnCompass?.destroy();
       this.wallCountView?.destroy();

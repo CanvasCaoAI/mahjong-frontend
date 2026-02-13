@@ -15,7 +15,9 @@ export class ActionPrompt {
   private readonly onHu: () => void;
   private readonly onGang: () => void;
   private readonly onPeng: () => void;
-  private readonly onChi: () => void;
+  private readonly onChi: () => boolean; // return true if opened a picker (defer action)
+
+  private suppressed = false;
   private readonly onPassClaim: () => void;
 
   constructor(
@@ -24,7 +26,7 @@ export class ActionPrompt {
       onHu: () => void;
       onGang: () => void;
       onPeng: () => void;
-      onChi: () => void;
+      onChi: () => boolean; // true => opened picker, do not mark pass yet
       onPassClaim: () => void;
     }
   ) {
@@ -54,9 +56,14 @@ export class ActionPrompt {
     });
 
     this.chiBtn = this.makeRoundBtn(0, 0, 44, '吃', 0x7C3AED, () => {
-      this.onChi();
-      this.markPassed();
-      this.setVisible(false);
+      const openedPicker = this.onChi();
+      if (!openedPicker) {
+        // 直接执行了吃/或吃无需选择时：按 claim 动作处理
+        this.afterClaimAction();
+      } else {
+        // 进入选择弹窗：先临时隐藏，取消时再恢复
+        this.setSuppressed(true);
+      }
     });
 
     this.passBtn = this.makeRoundBtn(0, 0, 36, '过', 0x0F766E, () => {
@@ -100,6 +107,33 @@ export class ActionPrompt {
     this.passedToken = this.currentToken();
   }
 
+  /**
+   * 临时隐藏（例如打开 Chi 组合选择弹窗时）。
+   * 不会写入 passedToken，取消时可以恢复。
+   */
+  setSuppressed(v: boolean) {
+    this.suppressed = v;
+    if (v) this.setVisible(false);
+  }
+
+  /**
+   * 取消弹窗后恢复按钮展示（不再视为 passed）。
+   */
+  restoreFromSuppressed(st: PublicState | null) {
+    this.suppressed = false;
+    this.passedToken = null;
+    this.update(st);
+  }
+
+  /**
+   * 选择吃/碰/杠 等 claim 动作后调用：写入 passedToken 并隐藏。
+   */
+  afterClaimAction() {
+    this.markPassed();
+    this.setSuppressed(false);
+    this.setVisible(false);
+  }
+
   private setVisible(v: boolean) {
     this.huBtn.setVisible(v);
     this.gangBtn.setVisible(v);
@@ -133,6 +167,11 @@ export class ActionPrompt {
 
     const canShowAny = !!(st && (st.winAvailable || st.gangAvailable || st.pengAvailable || st.chiAvailable));
     const shouldShow = !!(canShowAny && (!this.passedToken || this.passedToken !== token));
+
+    if (this.suppressed) {
+      this.setVisible(false);
+      return;
+    }
 
     if (!shouldShow) {
       this.setVisible(false);

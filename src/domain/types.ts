@@ -27,6 +27,7 @@ export type PublicState = {
   gangAvailable: boolean;
   pengAvailable: boolean;
   chiAvailable: boolean;
+  chiOptions?: [Tile, Tile][];
   message: string;
 
   // Scoreboard

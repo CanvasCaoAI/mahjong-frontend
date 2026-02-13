@@ -56,7 +56,7 @@ export class MahjongClient {
     this.socket?.emit('passClaim');
   }
 
-  chi() {
-    this.socket?.emit('chi');
+  chi(opts?: { a: string; b: string }) {
+    this.socket?.emit('chi', opts);
   }
 }
