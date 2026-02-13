@@ -12,11 +12,11 @@ export class HandView {
   private lastHandRaw: Tile[] | null = null;
   private pendingDrawIndex: number | null = null;
 
-  // Lock sizing for the whole round.
+  // Lock a base tile size for the whole round.
   // Do NOT recompute on hand length changes (13/14) to avoid jitter.
-  // Only shrink when the overall group would overflow (e.g. lots of flowers/kongs).
-  private lockedTileW: number | null = null;
-  private lockedGap: number | null = null;
+  // Only shrink proportionally when NEW flowers / kongs are added.
+  private baseTileW: number | null = null;
+  private baseDen: number | null = null; // baseHand(14) + extra at lock time
 
   private scene: Phaser.Scene;
   private opts: {
@@ -150,8 +150,8 @@ export class HandView {
 
     // If table is empty (between rounds), reset locked sizing.
     if (handRaw.length === 0 && flowerTiles.length === 0 && flatMeldTiles.length === 0) {
-      this.lockedTileW = null;
-      this.lockedGap = null;
+      this.baseTileW = null;
+      this.baseDen = null;
     }
     // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
     const flowerCount = new Map<Tile, number>();
@@ -207,30 +207,18 @@ export class HandView {
     // Hand gap should track tile width (no independent scaling).
     let tileW: number;
 
-    // If we already locked a size, only shrink when current content would overflow target width.
-    // Shrink proportionally from the current locked size (instead of recomputing from scratch) to avoid big jumps.
-    if (this.lockedTileW && this.lockedGap) {
-      tileW = this.lockedTileW;
-      gap = this.lockedGap;
+    // Compute "extra" only from flowers and GANGs.
+    // - Flowers: count of flower tiles
+    // - Gangs: each gang adds 1 extra slot (明杠/暗杠一样)
+    // - Chi/Peng do NOT affect extra (per requirement)
+    const gangCount = melds.filter((m) => m.type === 'gang').length;
+    const extra = flowerTiles.length + gangCount;
 
-      // For overflow detection/shrink, use current hand length (avoid over-shrinking on 13 tiles).
-      const handLenForSizing = hand.length;
-      const dimsLocked = calc(tileW, gap, handLenForSizing);
-      const targetW = tableW * 0.8;
+    const baseHand = 14;
 
-      if (dimsLocked.wholeW > targetW * 1.02 && dimsLocked.wholeW > 0) {
-        const scale = targetW / dimsLocked.wholeW;
-        const next = Math.max(28, Math.floor(tileW * scale));
-        this.lockedTileW = next;
-        this.lockedGap = next;
-        tileW = next;
-        gap = next;
-      }
-    }
-
-    // First render in a round (no lock yet): compute a size that targets 80% width.
-    if (!this.lockedTileW || !this.lockedGap) {
-      const handLenForSizing = Math.max(hand.length, 14);
+    // First render in a round: compute a base size that targets 80% width.
+    if (!this.baseTileW || !this.baseDen) {
+      const handLenForSizing = baseHand;
       tileW = Math.round(minDim * 0.07);
       gap = tileW;
       const dims0 = calc(tileW, gap, handLenForSizing);
@@ -241,12 +229,18 @@ export class HandView {
       tileW = Math.max(28, Math.round(tileW * scale));
       gap = tileW;
 
-      this.lockedTileW = tileW;
-      this.lockedGap = gap;
-    } else {
-      tileW = this.lockedTileW;
-      gap = this.lockedGap;
+      this.baseTileW = tileW;
+      this.baseDen = baseHand + extra;
     }
+
+    // Proportional shrink when NEW flowers / gangs are added.
+    // Example: extra increases by 1 => tileW = tileW0 * baseDen / (baseHand + extra)
+    const denNow = baseHand + extra;
+    const den0 = this.baseDen ?? denNow;
+    const scaleNow = den0 / denNow;
+
+    tileW = Math.max(28, Math.round((this.baseTileW ?? 28) * scaleNow));
+    gap = tileW;
 
     // Use actual current hand length for drawing (but sizing is locked).
     const dims = calc(tileW, gap, hand.length);
