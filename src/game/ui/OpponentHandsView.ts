@@ -68,9 +68,23 @@ export class OpponentHandsView {
     const result = st.result;
 
     const isWinner = (seat: Seat) => !!(result && result.winners?.includes(seat));
+    const sortTiles = (tiles: Tile[]): Tile[] => {
+      const suitOrder: Record<string, number> = { m: 0, p: 1, s: 2, z: 3, f: 4 };
+      return tiles.slice().sort((a, b) => {
+        const sa = a[0];
+        const sb = b[0];
+        const na = Number(a.slice(1));
+        const nb = Number(b.slice(1));
+        const ds = (suitOrder[sa] ?? 99) - (suitOrder[sb] ?? 99);
+        if (ds) return ds;
+        return na - nb;
+      });
+    };
+
     const winnerTiles = (seat: Seat): Tile[] | null => {
       const ts = result?.handsBySeat?.[seat];
-      return Array.isArray(ts) ? (ts as Tile[]) : null;
+      if (!Array.isArray(ts)) return null;
+      return sortTiles(ts as Tile[]);
     };
 
     // Win reason text is rendered around the center compass (handled in GameScene).
