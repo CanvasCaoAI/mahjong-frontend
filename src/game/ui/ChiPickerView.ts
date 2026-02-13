@@ -39,8 +39,8 @@ export class ChiPickerView {
     this.overlay.setInteractive();
     this.overlay.on('pointerdown', () => this.hide(true));
 
-    const pw = Math.round(w * 0.78);
-    const ph = Math.round(h * 0.34);
+    const pw = Math.round(w * 0.68);
+    const ph = Math.round(h * 0.26);
 
     this.bg = scene.add.rectangle(0, 0, pw, ph, 0x0b1020, 0.92).setStrokeStyle(1, 0xffffff, 0.14);
 
@@ -49,8 +49,8 @@ export class ChiPickerView {
       color: '#E2E8F0',
     });
 
-    // Cancel button (right-bottom)
-    this.cancelBtn = this.makeTextBtn(pw / 2 - 64, ph / 2 - 34, 96, 34, '取消', () => {
+    // Cancel button (top-right)
+    this.cancelBtn = this.makeTextBtn(pw / 2 - 54, -ph / 2 + 26, 72, 30, '取消', () => {
       this.hide(true);
     });
 
@@ -104,51 +104,59 @@ export class ChiPickerView {
     const pw = this.bg.width;
     const ph = this.bg.height;
 
-    const tileW = Math.round(w * 0.055);
+    const tileW = Math.round(w * 0.052);
     const tileH = Math.round(tileW * 1.28);
-    const gap = Math.round(tileW * 0.2);
+    const gap = Math.round(tileW * 0.18);
+
+    const padX = 18;
+    const topY = -ph / 2 + 44;
 
     // 左侧单独显示「被吃的牌」
-    const padX = 22;
-    const topY = -ph / 2 + 54;
-
     const claimLabel = this.scene.add
       .text(-pw / 2 + padX, topY, '被吃的牌', {
-        fontSize: `${Math.round(w * 0.016)}px`,
+        fontSize: `${Math.round(w * 0.014)}px`,
         color: '#AAB3C7',
       })
       .setOrigin(0, 0);
 
     const claimX = -pw / 2 + padX + tileW / 2;
-    const claimY = topY + 18 + tileH / 2;
+    const claimY = topY + 16 + tileH / 2;
     const claimImg = this.scene.add.image(claimX, claimY, tileKey(claimTile as any));
     claimImg.setDisplaySize(tileW, tileH);
 
-    this.optionObjs.push(claimLabel, claimImg);
-    this.container.add([claimLabel, claimImg]);
+    // 分隔线
+    const sepX = -pw / 2 + padX + tileW + 18;
+    const sep = this.scene.add.rectangle(sepX, 6, 1, ph - 26, 0xffffff, 0.10).setOrigin(0.5);
+
+    this.optionObjs.push(claimLabel, claimImg, sep);
+    this.container.add([claimLabel, claimImg, sep]);
 
     // 右侧显示组合：每个选项只展示 (a,b)
-    const optAreaX0 = -pw / 2 + padX + tileW + 34;
+    const optAreaX0 = sepX + 18;
     const optAreaX1 = pw / 2 - padX;
     const optAreaW = optAreaX1 - optAreaX0;
 
     const itemW = tileW * 2 + gap * 3;
     const cols = Math.max(1, Math.floor(optAreaW / itemW));
 
-    const gridTop = -ph / 2 + ph * 0.45;
-    const rowGap = Math.round(tileH * 0.25) + 18;
+    const gridTop = -ph / 2 + ph * 0.56;
+    const rowGap = Math.round(tileH * 0.22) + 12;
+
+    const usedCols = Math.min(cols, opts.length);
+    const gridW = usedCols * itemW;
+    const startX = optAreaX0 + (optAreaW - gridW) / 2 + itemW / 2;
 
     for (let i = 0; i < opts.length; i++) {
       const [a, b] = opts[i];
       const r = Math.floor(i / cols);
       const c = i % cols;
 
-      const x = Math.round(optAreaX0 + itemW / 2 + c * itemW);
+      const x = Math.round(startX + c * itemW);
       const y = Math.round(gridTop + r * rowGap);
 
       const hit = this.scene.add
-        .rectangle(x, y, itemW - 10, tileH + 22, 0xffffff, 0.06)
-        .setStrokeStyle(1, 0xffffff, 0.18)
+        .rectangle(x, y, itemW - 14, tileH + 18, 0xffffff, 0.04)
+        .setStrokeStyle(1, 0xffffff, 0.14)
         .setOrigin(0.5);
       hit.setInteractive({ useHandCursor: true });
       hit.on('pointerdown', () => {
@@ -159,11 +167,17 @@ export class ChiPickerView {
       const imgA = this.scene.add.image(x - (tileW / 2 + gap), y, tileKey(a as any));
       imgA.setDisplaySize(tileW, tileH);
 
+      // 小箭头
+      const arrow = this.scene.add.text(x, y + 1, '→', {
+        fontSize: `${Math.round(w * 0.018)}px`,
+        color: '#94A3B8',
+      }).setOrigin(0.5);
+
       const imgB = this.scene.add.image(x + (tileW / 2 + gap), y, tileKey(b as any));
       imgB.setDisplaySize(tileW, tileH);
 
-      this.optionObjs.push(hit, imgA, imgB);
-      this.container.add([hit, imgA, imgB]);
+      this.optionObjs.push(hit, imgA, arrow, imgB);
+      this.container.add([hit, imgA, arrow, imgB]);
     }
 
     this.container.setPosition(Math.round(w / 2), Math.round(h / 2));
