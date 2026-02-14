@@ -3,6 +3,10 @@ import Phaser from 'phaser';
 import { GameScene } from './game/scenes/GameScene';
 import { mountLobby } from './lobby';
 
+// PWA service worker (vite-plugin-pwa)
+import { registerSW } from 'virtual:pwa-register';
+registerSW({ immediate: true });
+
 function startGame() {
   const lobbyRoot = document.getElementById('lobby');
   const appRoot = document.getElementById('app');
