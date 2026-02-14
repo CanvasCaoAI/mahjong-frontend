@@ -168,7 +168,10 @@ export function mountLobby(opts: {
 
   // If user edits nickname after connecting, allow it to take effect immediately.
   const maybeSetName = () => {
-    const n = nameInput.value.trim();
+    // Only set name on explicit user actions (edit / ready), not on auto-connect.
+    // If user leaves it empty, fall back to the suggested placeholder so they still
+    // get a nice default nickname.
+    const n = nameInput.value.trim() || nameInput.placeholder || '';
     if (client.connected && n) client.setName(n);
   };
   nameInput.onchange = maybeSetName;
