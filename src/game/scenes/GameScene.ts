@@ -16,7 +16,7 @@ import { computeLayout } from '../ui/layout';
 import { uiScale } from '../ui/uiScale';
 
 const tableBgKey = 'table_bg';
-const tableBgUrl = '/assets/ui/table-solid-darkgreen.svg';
+const tableBgUrl = './assets/ui/table-solid-darkgreen.svg';
 
 const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
