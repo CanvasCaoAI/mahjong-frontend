@@ -5,7 +5,17 @@ import { getOrCreateClientId, getRoomId, isDebugMode, getDebugTileCount } from '
 const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
 
-const DEFAULT_SERVER = 'http://localhost:5174';
+// Default to same host (this page) but backend port 5174.
+// IMPORTANT: do not hardcode localhost; on EC2, users' browsers would point to their own machine.
+const DEFAULT_SERVER = (() => {
+  const qs = new URLSearchParams(location.search);
+  const override = (qs.get('server') || '').trim();
+  if (override) return override;
+
+  const proto = location.protocol; // http/https
+  const host = location.hostname;
+  return `${proto}//${host}:5174`;
+})();
 
 const RANDOM_NAMES = [
   '阿凯','小鹿','丸子','阿飞','大熊','小新','皮皮','阿文','豆豆','小雨','米粒','南风','北辰','橘子','可可','星河','木木','团子'
