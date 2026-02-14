@@ -3,6 +3,14 @@ import type { Meld, Tile } from '../../domain/types';
 import { tileKey } from '../../domain/tileset';
 import { TileButton } from './TileButton';
 
+/**
+ * Bottom hand area renderer.
+ *
+ * Refactor note (2026-02-14):
+ * - Hand tile size is derived ONLY from screen width and is fixed (no dynamic shrinking/growing based on hand state).
+ * - Flower tiles and flat meld tiles (碰/吃/杠) are always exactly 1/2 of hand tile size.
+ * - All dynamic resize logic tied to flowers/kongs/hand length changes has been removed.
+ */
 export class HandView {
   private buttons: TileButton[] = [];
   private meldSprites: Phaser.GameObjects.GameObject[] = [];
@@ -11,12 +19,6 @@ export class HandView {
   // 用于“新摸的那张牌”不参与排序，放到最右侧显示
   private lastHandRaw: Tile[] | null = null;
   private pendingDrawIndex: number | null = null;
-
-  // Lock a base tile size for the whole round.
-  // Do NOT recompute on hand length changes (13/14) to avoid jitter.
-  // Only shrink proportionally when NEW flowers / kongs are added.
-  private baseTileW: number | null = null;
-  private baseDen: number | null = null; // baseHand(14) + extra at lock time
 
   private scene: Phaser.Scene;
   private opts: {
@@ -134,9 +136,6 @@ export class HandView {
     this.lastHandRaw = handRaw.slice();
 
     const y = this.opts.y;
-    // Hand gap should track tile width (no independent scaling).
-    // i.e. spacing between tiles = tileW.
-    let gap = 0;
     const tableW = this.opts.width;
 
     // Split melds into: flowers (left) and flat melds (peng/chi/gang)
@@ -148,11 +147,6 @@ export class HandView {
       else flatMeldTiles.push(...m.tiles);
     }
 
-    // If table is empty (between rounds), reset locked sizing.
-    if (handRaw.length === 0 && flowerTiles.length === 0 && flatMeldTiles.length === 0) {
-      this.baseTileW = null;
-      this.baseDen = null;
-    }
     // Avoid double-counting if server already moved a flower into melds but still echoes it in hand.
     const flowerCount = new Map<Tile, number>();
     for (const t of flowerTiles) flowerCount.set(t, (flowerCount.get(t) ?? 0) + 1);
@@ -164,119 +158,61 @@ export class HandView {
       flowerCount.set(t as Tile, 1);
     }
 
-    // Hand tile sizing: lock per round (until manual refresh).
-    // Goal: the whole group occupies ~80% screen width.
-    const minDim = Math.min(this.scene.scale.width, this.scene.scale.height);
+    // ===== Fixed sizing (only depends on screen width) =====
+    // Base hand tile size (constant ratio of screen width)
+    const w = this.scene.scale.width;
+    const handTileW = Math.max(28, Math.round(w * 0.055));
+    const handTileH = Math.round(handTileW * 1.30);
+    const handImgW = Math.round(handTileW - 4);
+    const handImgH = Math.round(handTileH - 6);
 
-    const calc = (tileW: number, gap: number, handLenForSizing: number) => {
-      const tileH = Math.round(tileW * 1.30);
-      const imgW = Math.round(tileW - 4);
-      const imgH = Math.round(tileH - 6);
+    // Flowers & melds are always exactly half of hand tile size
+    const smallTileW = Math.max(14, Math.round(handTileW / 2));
+    const smallTileH = Math.round(smallTileW * 1.30);
 
-      // Meld tiles use the same width/height as hand tiles.
-      const meldGap = Math.round(tileW + Math.max(2, tileW * 0.04));
+    // Spacing rules: spacing tracks tile width (no independent scaling)
+    const handGap = handTileW;
+    const smallGap = smallTileW;
 
-      const flowerGap = Math.round(tileW + Math.max(2, tileW * 0.04));
-      const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * flowerGap + tileW : 0;
-      const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * meldGap + tileW : 0;
-      const totalW = handLenForSizing > 0 ? (handLenForSizing - 1) * gap + tileW : 0;
+    const drawnExtra = (drawn ? Math.round(handGap * 0.6) : 0);
 
-      const gapFlowerToMeld = flowerTiles.length && flatMeldTiles.length ? Math.round(Math.max(10, gap * 0.25)) : 0;
-      const gapFlowerToHand = flowerTiles.length && !flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
-      const gapMeldToHand = flatMeldTiles.length ? Math.round(Math.max(18, gap * 0.35)) : 0;
+    const flowerW = flowerTiles.length ? (flowerTiles.length - 1) * smallGap + smallTileW : 0;
+    const meldW = flatMeldTiles.length ? (flatMeldTiles.length - 1) * smallGap + smallTileW : 0;
+    const handW = hand.length ? (hand.length - 1) * handGap + handTileW + drawnExtra : 0;
 
-      const wholeW = flowerW + gapFlowerToMeld + meldW + (gapMeldToHand || gapFlowerToHand) + totalW;
+    const gapFlowerToMeld = (flowerTiles.length && flatMeldTiles.length) ? Math.round(Math.max(10, handTileW * 0.25)) : 0;
+    const gapFlowerToHand = (flowerTiles.length && !flatMeldTiles.length) ? Math.round(Math.max(18, handTileW * 0.35)) : 0;
+    const gapMeldToHand = (flatMeldTiles.length) ? Math.round(Math.max(18, handTileW * 0.35)) : 0;
 
-      return {
-        tileW,
-        tileH,
-        imgW,
-        imgH,
-        meldGap,
-        flowerGap,
-        flowerW,
-        meldW,
-        totalW,
-        gapFlowerToMeld,
-        gapFlowerToHand,
-        gapMeldToHand,
-        wholeW,
-      };
-    };
+    const wholeW = flowerW + gapFlowerToMeld + meldW + (gapMeldToHand || gapFlowerToHand) + handW;
 
-    // Hand gap should track tile width (no independent scaling).
-    let tileW: number;
-
-    // Compute "extra" only from flowers and GANGs.
-    // - Flowers: count of flower tiles
-    // - Gangs: each gang adds 1 extra slot (明杠/暗杠一样)
-    // - Chi/Peng do NOT affect extra (per requirement)
-    const gangCount = melds.filter((m) => m.type === 'gang').length;
-    const extra = flowerTiles.length + gangCount;
-
-    const baseHand = 14;
-
-    // First render in a round: compute a base size that targets 80% width.
-    if (!this.baseTileW || !this.baseDen) {
-      const handLenForSizing = baseHand;
-      tileW = Math.round(minDim * 0.07);
-      gap = tileW;
-      const dims0 = calc(tileW, gap, handLenForSizing);
-
-      const targetW = tableW * 0.8;
-      const scale = dims0.wholeW > 0 ? (targetW / dims0.wholeW) : 1;
-
-      tileW = Math.max(28, Math.round(tileW * scale));
-      gap = tileW;
-
-      this.baseTileW = tileW;
-      // Base denominator is always 14 (ignore current extras). We only shrink when extras increase.
-      this.baseDen = baseHand;
-    }
-
-    // Proportional shrink when NEW flowers / gangs are added.
-    // Example: extra increases by 1 => tileW = tileW0 * baseDen / (baseHand + extra)
-    const denNow = baseHand + extra;
-    const den0 = this.baseDen ?? baseHand;
-
-    // Only shrink (never grow bigger than base) to keep visuals stable.
-    const scaleNow = Math.min(1, den0 / denNow);
-
-    tileW = Math.max(28, Math.round((this.baseTileW ?? 28) * scaleNow));
-    gap = tileW;
-
-    // Use actual current hand length for drawing (but sizing is locked).
-    const dims = calc(tileW, gap, hand.length);
-
-    // If we scale up, the bottom of flower/meld blocks can get clipped by the viewport.
-    // Adjust Y upward so the whole group stays visible.
+    // Keep bottom visible: compute max-bottom among the three blocks
     const sceneH = this.scene.scale.height;
-    // Allow hand group to sit very close to bottom edge
     const bottomLimit = sceneH - 2;
-    const handBottom = y + dims.tileH / 2;
-    const meldBottom = y + dims.tileH * 0.725; // includes the small base block
-    const overflowBottom = Math.max(handBottom, meldBottom) - bottomLimit;
+    const handBottom = y + handTileH / 2;
+    const smallBottom = y + smallTileH / 2;
+    const overflowBottom = Math.max(handBottom, smallBottom) - bottomLimit;
     const yAdj = overflowBottom > 0 ? Math.round(y - overflowBottom) : y;
 
     // center whole group within a safe horizontal band (avoid overlapping side players)
     const xLeft = this.opts.xLeft ?? 0;
     const xRight = this.opts.xRight ?? tableW;
     const availW = Math.max(0, xRight - xLeft);
-    const centeredWholeStart = xLeft + (availW - dims.wholeW) / 2;
-    const startWholeX = dims.wholeW > availW ? xLeft : centeredWholeStart;
+    const centeredWholeStart = xLeft + (availW - wholeW) / 2;
+    const startWholeX = wholeW > availW ? xLeft : centeredWholeStart;
 
     const flowerStartX = startWholeX;
-    const meldStartX = flowerStartX + dims.flowerW + dims.gapFlowerToMeld;
-    const handStartX = meldStartX + dims.meldW + (dims.gapMeldToHand || dims.gapFlowerToHand);
+    const meldStartX = flowerStartX + flowerW + gapFlowerToMeld;
+    const handStartX = meldStartX + meldW + (gapMeldToHand || gapFlowerToHand);
 
     // 1) 花牌：最左侧
     this.renderFlowers({
       tiles: flowerTiles,
       startX: flowerStartX,
       y: yAdj,
-      gap: dims.flowerGap,
-      tileW: dims.tileW,
-      tileH: dims.tileH,
+      gap: smallGap,
+      tileW: smallTileW,
+      tileH: smallTileH,
     });
 
     // 2) 碰/杠/吃：其次
@@ -284,9 +220,9 @@ export class HandView {
       tiles: flatMeldTiles,
       startX: meldStartX,
       y: yAdj,
-      gap: dims.meldGap,
-      tileW: dims.tileW,
-      tileH: dims.tileH,
+      gap: smallGap,
+      tileW: smallTileW,
+      tileH: smallTileH,
     });
 
     // 3) 手牌：含最新摸牌
@@ -295,11 +231,11 @@ export class HandView {
       canDiscard,
       startX: handStartX,
       y: yAdj,
-      gap,
-      tileW: dims.tileW,
-      tileH: dims.tileH,
-      imgW: dims.imgW,
-      imgH: dims.imgH,
+      gap: handGap,
+      tileW: handTileW,
+      tileH: handTileH,
+      imgW: handImgW,
+      imgH: handImgH,
       drawn: !!drawn,
     });
   }
@@ -311,7 +247,7 @@ export class HandView {
       const key = tileKey(tiles[i] as any);
       const img = this.scene.add.image(x, y, key);
       img.setDisplaySize(tileW, tileH);
-      // Flowers: 70% opacity, no base block
+      // Flowers: 70% opacity
       img.setAlpha(0.70);
       img.setDepth(60);
 
@@ -329,7 +265,7 @@ export class HandView {
       const img = this.scene.add.image(x, y, key);
       img.setDisplaySize(tileW, tileH);
 
-      // Melds: 70% opacity, no base block
+      // Melds: 70% opacity
       img.setAlpha(0.70);
       img.setDepth(60);
 
