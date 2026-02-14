@@ -103,12 +103,18 @@ export function mountLobby(opts: {
     connectBtn.textContent = '连接中…';
     connectBtn.disabled = true;
 
-    const name = nameInput.value.trim() || nameInput.placeholder || '玩家';
+    // IMPORTANT:
+    // - Do NOT use the random placeholder as the real nickname.
+    //   Otherwise we will auto-connect and immediately set a random name on the server.
+    // - Only send setName when user actually typed something.
+    const name = nameInput.value.trim();
+
     const roomId = getRoomId();
     const clientId = getOrCreateClientId();
     const tile = debugMode ? (tile5Cb.checked ? 4 : null) : getDebugTileCount();
     const sameTile = debugMode ? (sameTileCb.checked ? 'm1' : null) : null;
-    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile, sameTile }, name, (msg) => {
+
+    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile, sameTile }, name || undefined, (msg) => {
       status.textContent = `⚠️ ${msg}`;
       connecting = false;
       connectBtn.textContent = '重试连接';
@@ -118,15 +124,22 @@ export function mountLobby(opts: {
 
   function render(st: PublicState) {
     const connected = client.connected;
-    const ptxt = st.players
-      .map((p, i) => {
-        const pos = seatName(i as Seat);
-        return p ? `${pos}: ${p.name}${p.ready ? '（已准备）' : ''}` : `${pos}: (空)`;
-      })
-      .join(' | ');
+
+    // Only show players AFTER they are ready.
+    // Requirement: don't show the full "东:xxx | 南:xxx | ..." line at the very beginning.
+    // Instead, show one player when one player becomes ready.
+    const readyList = st.players
+      .map((p, i) => ({ p, i }))
+      .filter((x) => !!x.p && !!x.p.ready);
 
     status.textContent = '';
-    players.textContent = ptxt;
+    if (readyList.length === 0) {
+      players.textContent = '';
+    } else {
+      players.textContent = readyList
+        .map(({ p, i }) => `${seatName(i as Seat)}: ${(p as any).name}（已准备）`)
+        .join(' | ');
+    }
 
     readyBtn.disabled = !connected;
 
@@ -153,7 +166,17 @@ export function mountLobby(opts: {
     doConnect(debugMode);
   };
 
+  // If user edits nickname after connecting, allow it to take effect immediately.
+  const maybeSetName = () => {
+    const n = nameInput.value.trim();
+    if (client.connected && n) client.setName(n);
+  };
+  nameInput.onchange = maybeSetName;
+  nameInput.onblur = maybeSetName;
+
   readyBtn.onclick = () => {
+    // On ready, always sync the typed nickname first (if any)
+    maybeSetName();
     client.ready();
   };
 
