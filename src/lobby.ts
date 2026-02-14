@@ -5,17 +5,58 @@ import { getOrCreateClientId, getRoomId, isDebugMode, getDebugTileCount } from '
 const SEAT_NAME: Record<Seat, string> = { 0: '东', 1: '南', 2: '西', 3: '北' };
 const seatName = (s: Seat) => SEAT_NAME[s] ?? String(s);
 
-// Default to same host (this page) but backend port 5174.
-// IMPORTANT: do not hardcode localhost; on EC2, users' browsers would point to their own machine.
-const DEFAULT_SERVER = (() => {
+// Resolve backend server URL for different deployments.
+// Priority:
+// 1) ?server=http://...
+// 2) window.__MAHJONG_SERVER_URL__ (injected)
+// 3) /config.json  { "serverUrl": "http://..." }
+// 4) fallback: same host + :5174 (works for local dev)
+
+function serverFromQuery(): string | null {
   const qs = new URLSearchParams(location.search);
   const override = (qs.get('server') || '').trim();
-  if (override) return override;
+  return override || null;
+}
 
-  const proto = location.protocol; // http/https
+function serverFromWindow(): string | null {
+  const v = (window as any).__MAHJONG_SERVER_URL__;
+  return (typeof v === 'string' && v.trim()) ? v.trim() : null;
+}
+
+function serverFallback(): string {
+  const proto = location.protocol;
   const host = location.hostname;
   return `${proto}//${host}:5174`;
-})();
+}
+
+let serverFromConfigCache: Promise<string | null> | null = null;
+async function serverFromConfig(): Promise<string | null> {
+  if (!serverFromConfigCache) {
+    serverFromConfigCache = (async () => {
+      try {
+        // cache-bust so Qiniu changes take effect quickly
+        const url = `/config.json?t=${Date.now()}`;
+        const res = await fetch(url, { cache: 'no-store' as any });
+        if (!res.ok) return null;
+        const j = await res.json().catch(() => null) as any;
+        const v = (j?.serverUrl ?? j?.server ?? '').toString().trim();
+        return v || null;
+      } catch {
+        return null;
+      }
+    })();
+  }
+  return serverFromConfigCache;
+}
+
+async function resolveServerUrl(): Promise<string> {
+  return (
+    serverFromQuery() ||
+    serverFromWindow() ||
+    (await serverFromConfig()) ||
+    serverFallback()
+  );
+}
 
 const RANDOM_NAMES = [
   '阿凯','小鹿','丸子','阿飞','大熊','小新','皮皮','阿文','豆豆','小雨','米粒','南风','北辰','橘子','可可','星河','木木','团子'
@@ -106,7 +147,7 @@ export function mountLobby(opts: {
 
   let connecting = false;
 
-  function doConnect(force = false) {
+  async function doConnect(force = false) {
     if (connecting) return;
     if (!force && client.connected) return;
     connecting = true;
@@ -124,7 +165,11 @@ export function mountLobby(opts: {
     const tile = debugMode ? (tile5Cb.checked ? 4 : null) : getDebugTileCount();
     const sameTile = debugMode ? (sameTileCb.checked ? 'm1' : null) : null;
 
-    connectToServer(DEFAULT_SERVER, { roomId, clientId, debug: isDebugMode(), tile, sameTile }, name || undefined, (msg) => {
+    // Resolve server URL (Qiniu config.json / query override / fallback)
+    status.textContent = '';
+    const serverUrl = await resolveServerUrl();
+
+    connectToServer(serverUrl, { roomId, clientId, debug: isDebugMode(), tile, sameTile }, name || undefined, (msg) => {
       status.textContent = `⚠️ ${msg}`;
       connecting = false;
       connectBtn.textContent = '重试连接';
@@ -169,7 +214,10 @@ export function mountLobby(opts: {
   const un = onState(render);
 
   // Entering the page => auto connect (only when not in debug mode)
-  if (!debugMode) doConnect();
+  if (!debugMode) {
+    status.textContent = '加载配置中…';
+    void doConnect();
+  }
 
   // Connect / reconnect
   connectBtn.onclick = () => {
