@@ -68,6 +68,26 @@ export class GameScene extends Phaser.Scene {
     const bg = this.add.image(w / 2, h / 2, tableBgKey);
     bg.setDisplaySize(w, h);
 
+    // Re-layout on resize.
+    // Phaser Scale.RESIZE will update `this.scale.width/height`, but our UI only
+    // re-renders on new server state by default. So window resize looked like it
+    // "does nothing" until refresh / next state update.
+    this.scale.on('resize', (gs: any) => {
+      const nw = (gs?.width ?? this.scale.width) as number;
+      const nh = (gs?.height ?? this.scale.height) as number;
+
+      bg.setPosition(nw / 2, nh / 2);
+      bg.setDisplaySize(nw, nh);
+
+      // Wordwrap width depends on screen size.
+      const m = Math.round(nw * 0.03);
+      this.msgText?.setPosition(m, m);
+      (this.msgText as any)?.setWordWrapWidth?.(nw - m * 2, true);
+
+      // Force UI redraw with the last known state.
+      this.updateUI();
+    });
+
     // 顶部左上角不显示任何信息（按需求保持空白）。
     this.hudText = this.add.text(0, 0, '', { fontSize: '14px', color: '#AAB3C7' });
     this.hudText.setVisible(false);
