@@ -25,7 +25,9 @@ export class ScoreboardView {
   constructor(scene: Phaser.Scene) {
     const w = scene.scale.width;
     const h = scene.scale.height;
-    const margin = Math.round(w * 0.02);
+    // Score button should hug the top-right corner.
+    // Keep a tiny inset to avoid clipping by device safe areas / rounding.
+    const margin = 2;
 
     // Button (top-right)
     const bw = Math.round(w * 0.10);
