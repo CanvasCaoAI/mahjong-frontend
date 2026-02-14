@@ -15,7 +15,8 @@ export function tileKey(t: Tile): string {
 }
 
 export function tileUrl(t: Tile): string {
-  return `/assets/tiles/${t}.png`;
+  // Use relative path so it works when the app is served under a subfolder (e.g. /majiang/).
+  return `./assets/tiles/${t}.png`;
 }
 
 export function backKey(): string {
@@ -23,5 +24,6 @@ export function backKey(): string {
 }
 
 export function backUrl(): string {
-  return '/assets/tiles/back.svg';
+  // Use relative path so it works when the app is served under a subfolder (e.g. /majiang/).
+  return './assets/tiles/back.svg';
 }
